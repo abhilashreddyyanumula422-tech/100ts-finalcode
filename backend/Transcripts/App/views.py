@@ -1030,6 +1030,14 @@ class CreateCashfreeOrder(APIView):
             id=application_id
         )
 
+        env = Cashfree.PRODUCTION if settings.CASHFREE_ENVIRONMENT == 'PRODUCTION' else Cashfree.SANDBOX
+        Cashfree.XApiVersion = "2023-08-01"  # Required for v6 SDK
+        cashfree_client = Cashfree(
+            XClientId=settings.CASHFREE_CLIENT_ID,
+            XClientSecret=settings.CASHFREE_CLIENT_SECRET,
+            XEnvironment=env
+        )
+
         order_id = f"ORD_{uuid.uuid4().hex[:12]}"
 
         # Clean phone number
@@ -1058,13 +1066,8 @@ class CreateCashfreeOrder(APIView):
         )
 
         try:
-            cashfree = Cashfree(
-                XEnvironment=settings.CASHFREE_ENVIRONMENT
-                )
-            response = cashfree.PGCreateOrder(
-                str(uuid.uuid4()),
-                order_request
-                )
+            # v6 SDK: call on instance, no version string positional arg
+            response = cashfree_client.PGCreateOrder(order_request)
 
             payment = Payment.objects.create(
                 application=application,
@@ -1088,14 +1091,29 @@ class CreateCashfreeOrder(APIView):
         except Exception as e:
 
             print("\n========== CASHFREE ERROR ==========")
-            print(str(e))
+            print(f"Type: {type(e).__name__}")
+            print(f"Message: {str(e)}")
+
+            # Try to extract detailed Cashfree API response body
+            cf_body = None
+            if hasattr(e, 'body'):
+                cf_body = e.body
+                print(f"Cashfree Response Body: {cf_body}")
+            if hasattr(e, 'status'):
+                print(f"Cashfree HTTP Status: {e.status}")
+            if hasattr(e, 'reason'):
+                print(f"Cashfree Reason: {e.reason}")
+
             traceback.print_exc()
             print("===================================\n")
+
+            error_detail = cf_body if cf_body else str(e)
 
             return Response(
                 {
                     "success": False,
-                    "message": str(e)
+                    "error": str(e),
+                    "detail": error_detail
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
@@ -1106,10 +1124,17 @@ class VerifyPayment(APIView):
 
     def get(self, request, order_id):
 
-        response = Cashfree().PGFetchOrder(
-            None,
-            order_id
+        env = Cashfree.PRODUCTION if settings.CASHFREE_ENVIRONMENT == 'PRODUCTION' else Cashfree.SANDBOX
+        Cashfree.XApiVersion = "2023-08-01"  # Required for v6 SDK
+        
+        cashfree_client = Cashfree(
+            XClientId=settings.CASHFREE_CLIENT_ID,
+            XClientSecret=settings.CASHFREE_CLIENT_SECRET,
+            XEnvironment=env
         )
+
+        # v6 SDK: call on instance, no version string positional arg
+        response = cashfree_client.PGFetchOrder(order_id)
 
         payment = get_object_or_404(
             Payment,
@@ -1150,6 +1175,22 @@ from django.views.decorators.csrf import csrf_exempt
 
 @csrf_exempt
 def cashfree_webhook(request):
+
+    env = Cashfree.PRODUCTION if settings.CASHFREE_ENVIRONMENT == 'PRODUCTION' else Cashfree.SANDBOX
+    cashfree_client = Cashfree(
+        XClientId=settings.CASHFREE_CLIENT_ID,
+        XClientSecret=settings.CASHFREE_CLIENT_SECRET,
+        XEnvironment=env
+    )
+
+    try:
+        cashfree_client.PGVerifyWebhookSignature(
+            request.headers.get("x-webhook-signature", ""),
+            request.body.decode('utf-8'),
+            request.headers.get("x-webhook-timestamp", "")
+        )
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": "Invalid signature"}, status=400)
 
     payload = json.loads(request.body)
 

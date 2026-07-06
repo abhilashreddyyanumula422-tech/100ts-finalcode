@@ -17,12 +17,6 @@ urlpatterns = [
     # path('upload/', upload_image),
     path('register/', views.register_user),
     path('verify/', views.login_user),
-    path(
-    "create-order/<int:application_id>/",
-    views.CreateCashfreeOrder.as_view(),
-    name="create-order"
-),
-  
 
     path("contact/", views.contact_api),
     path("add_college/", views.add_college),

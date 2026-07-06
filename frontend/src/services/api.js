@@ -5,7 +5,7 @@
 // Change this IP address to your backend server
 // For development: use your local IP or localhost
 // For production: use your domain name
-const API_BASE_URL = "http://192.168.1.35:8000";
+const API_BASE_URL = "http://192.168.1.30:8000";
 
 // ===============================
 // API Helper Functions
@@ -146,12 +146,8 @@ export const createOrder = async (amount, applicationId) => {
   return apiPost("/api/create-order/", { amount, application_id: applicationId });
 };
 
-export const verifyPayment = async (razorpayOrderId, razorpayPaymentId, razorpaySignature) => {
-  return apiPost("/api/verifys/", {
-    razorpay_order_id: razorpayOrderId,
-    razorpay_payment_id: razorpayPaymentId,
-    razorpay_signature: razorpaySignature
-  });
+export const verifyPayment = async (orderId) => {
+  return apiGet(`/api/verify-payment/${orderId}/`);
 };
 
 export const refundPayment = async (applicationId) => {

@@ -1,0 +1,18 @@
+# Virtual environments
+demo/
+backend/Transcripts/demo/
+
+# Environment variables
+.env
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database
+db.sqlite3
+
+# Node modules (just in case)
+node_modules/
+.npm/

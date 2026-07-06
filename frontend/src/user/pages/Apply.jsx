@@ -2205,14 +2205,13 @@ export default function Apply() {
 
   const handlePayment = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/create-order/`, {
+      const res = await fetch(`${API_BASE}/api/create-order/${applicationId}/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          amount: 20, // ₹1
-          application_id: applicationId,
+          amount: 20,
         }),
       });
 
@@ -2224,74 +2223,39 @@ export default function Apply() {
 
       const data = await res.json();
 
-      const options = {
-        key: "rzp_test_Sg6qpBoNrt75cC",
-        amount: data.amount,
-        currency: "INR",
-        order_id: data.order_id,
+      const cashfree = window.Cashfree({
+        mode: "sandbox", // Set to "sandbox" for testing
+      });
 
-        name: "100 Transcripts",
-        description: "Document Verification Fee",
+      const checkoutOptions = {
+        paymentSessionId: data.payment_session_id,
+        redirectTarget: "_modal",
+      };
 
-        handler: async function (response) {
+      cashfree.checkout(checkoutOptions).then(async (result) => {
+        if (result.error) {
+          alert("Payment Failed: " + result.error.message);
+          return;
+        }
+        
+        if (result.paymentDetails || result.redirect === false) {
           try {
-            const verifyRes = await fetch(`${API_BASE}/api/verifys/`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                application_id: applicationId,
-              }),
-            });
-
+            const verifyRes = await fetch(`${API_BASE}/api/verify-payment/${data.order_id}/`);
             const verifyData = await verifyRes.json();
 
-            if (verifyRes.ok && verifyData.status === "success") {
+            if (verifyRes.ok && verifyData.status === "PAID") {
               alert("Payment Successful ✅");
               goStep(3);
             } else {
               alert("Payment Failed ❌");
             }
-          } catch {
+          } catch (error) {
             alert("Verification error ❌");
           }
-        },
-
-        prefill: {
-          name: form.fullName,
-          email: form.email,
-          contact: form.phone,
-        },
-
-        theme: {
-          color: "#2563eb",
-        },
-
-        // ✅ FORCE UPI ONLY (Scanner works perfectly)
-        method: {
-          upi: true,
-          card: true,
-          netbanking: false,
-          wallet: false,
-        },
-
-        // ✅ Opens QR / UPI apps directly
-        modal: {
-          ondismiss: function () {
-            // Payment popup closed
-          },
-        },
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-
-    } catch {
-      console.error("Payment Error");
+        }
+      });
+    } catch (error) {
+      console.error("Payment Error:", error);
       alert("Payment error ❌");
     }
   };
