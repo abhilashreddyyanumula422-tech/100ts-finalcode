@@ -20,10 +20,35 @@ class ImageUploadSerializer(serializers.ModelSerializer):
 from rest_framework import serializers
 from .models import Users
 
+import re
+
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Users
         fields = "__all__"
+
+    def validate_name(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError("Name is required.")
+        if not re.match(r'^[a-zA-Z\s]+$', value.strip()):
+            raise serializers.ValidationError("Name can only contain alphabets and spaces.")
+        if len(value.strip()) < 2:
+            raise serializers.ValidationError("Name must be at least 2 characters.")
+        return value.strip()
+
+    def validate_phone(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError("Phone number is required.")
+        if not re.match(r'^[0-9]{10}$', value.strip()):
+            raise serializers.ValidationError("Enter a valid 10-digit phone number.")
+        return value.strip()
+
+    def validate_email(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError("Email is required.")
+        if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', value.strip()):
+            raise serializers.ValidationError("Please enter a valid email.")
+        return value.strip()
 
 class AdminUserSerializer(serializers.ModelSerializer):
     class Meta:

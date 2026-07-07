@@ -97,21 +97,28 @@ DATABASES = {
 # For development - uncomment to log emails to console instead of sending
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# For production - SMTP configuration
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'narusrinivasareddy2002@gmail.com'
-EMAIL_HOST_PASSWORD = 'kjiz qypw aecv uqmg'
 
 import os
 from pathlib import Path
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR.parent / ".env")
 
-load_dotenv(BASE_DIR / ".env")
+# WhatsApp Interakt API Configuration
+WHATSAPP_ENABLED = os.getenv("WHATSAPP_ENABLED", "False").lower() in ("true", "1", "t")
+INTERAKT_SECRET_KEY = os.getenv("INTERAKT_SECRET_KEY", "")
+INTERAKT_BASE_URL = os.getenv("INTERAKT_BASE_URL", "https://api.interakt.ai/v1/public/message/")
+INTERAKT_TEMPLATE_NAME = os.getenv("INTERAKT_TEMPLATE_NAME", "")
+
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 465
+EMAIL_USE_SSL = True
+EMAIL_USE_TLS = False
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "support@100Transcripts.com")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 
 CASHFREE_CLIENT_ID = os.getenv("CASHFREE_CLIENT_ID")
 CASHFREE_CLIENT_SECRET = os.getenv("CASHFREE_CLIENT_SECRET")

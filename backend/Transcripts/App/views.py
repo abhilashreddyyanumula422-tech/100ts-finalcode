@@ -388,6 +388,23 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import Application, Degree, Document
 import json
+import re
+
+def validate_name_backend(name):
+    if not name or not name.strip(): return "Name is required"
+    if not re.match(r'^[a-zA-Z\s]+$', name.strip()): return "Name can only contain alphabets and spaces"
+    if len(name.strip()) < 2: return "Name must be at least 2 characters"
+    return None
+
+def validate_phone_backend(phone):
+    if not phone or not phone.strip(): return "Phone is required"
+    if not re.match(r'^[0-9]{10}$', phone.strip()): return "Enter a valid 10-digit phone number"
+    return None
+
+def validate_email_backend(email):
+    if not email or not email.strip(): return "Email is required"
+    if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email.strip()): return "Please enter a valid email"
+    return None
 
 
 @api_view(['POST'])
@@ -395,11 +412,21 @@ def submit_application(request):
     try:
         data = request.POST
 
-        # ✅ Basic validation (avoid NULL crash)
-        required_fields = ["fullName", "email", "phone", "altPhone", "requirement"]
-        for field in required_fields:
-            if not data.get(field):
-                return Response({"error": f"{field} is required"}, status=400)
+        # ✅ Strict Field Validation
+        name_err = validate_name_backend(data.get("fullName"))
+        if name_err: return Response({"error": name_err}, status=400)
+
+        email_err = validate_email_backend(data.get("email"))
+        if email_err: return Response({"error": email_err}, status=400)
+
+        phone_err = validate_phone_backend(data.get("phone"))
+        if phone_err: return Response({"error": phone_err}, status=400)
+
+        alt_phone_err = validate_phone_backend(data.get("altPhone"))
+        if alt_phone_err: return Response({"error": alt_phone_err}, status=400)
+
+        if not data.get("requirement"):
+            return Response({"error": "requirement is required"}, status=400)
 
         # ✅ Create Application safely
         app = Application.objects.create(
@@ -445,6 +472,16 @@ def submit_application(request):
                 name=file.name,
                 file=file
             )
+
+        from .utils import send_notification_helper
+        send_notification_helper(
+            email=app.email,
+            phone=app.phone,
+            subject="Application Submitted Successfully",
+            message=f"Hello {app.fullName},\n\nYour application has been received and is being processed.",
+            whatsapp_template=settings.INTERAKT_TEMPLATE_NAME,
+            whatsapp_data=[app.fullName, "Submitted"]
+        )
 
         return Response({
             "message": "Submitted Successfully",
@@ -563,6 +600,35 @@ def update_status(request, id=None):
             if admin_message is not None:
                 app.admin_message = admin_message
             app.save()
+            
+            from .utils import send_interakt_template
+            
+            # --- START WHATSAPP NOTIFICATION LOGIC ---
+            # Note: 'Approved' and 'Rejected' are handled automatically by the Application model's save() override.
+            if status == "Dispatched":
+                courier = data.get("courier_partner", "Standard Courier")
+                tracking = data.get("tracking_id", app.tracking_id or "N/A")
+                if data.get("tracking_id"):
+                    app.tracking_id = tracking
+                    app.save()
+                send_interakt_template(
+                    phone_number=app.phone, 
+                    template_name="certificate_dispatched", 
+                    variables=[app.fullName, courier, tracking],
+                    application_id=app.application_id,
+                    customer_name=app.fullName,
+                    status=status
+                )
+            elif status == "Delivered":
+                send_interakt_template(
+                    phone_number=app.phone, 
+                    template_name="certificate_delivered", 
+                    variables=[app.fullName],
+                    application_id=app.application_id,
+                    customer_name=app.fullName,
+                    status=status
+                )
+            # --- END WHATSAPP NOTIFICATION LOGIC ---
 
             return JsonResponse({"message": "Status updated"})
         except Application.DoesNotExist:
@@ -1144,9 +1210,15 @@ class VerifyPayment(APIView):
         payment.status = response.data.order_status
         payment.save()
 
+        from .utils import send_interakt_template
         if response.data.order_status == "PAID":
             payment.application.payment_status = "Paid"
             payment.application.save()
+            send_interakt_template(payment.application.phone, "payment_status", [payment.application.fullName, payment.application.application_id, "Successful"])
+        elif response.data.order_status == "FAILED":
+            send_interakt_template(payment.application.phone, "payment_status", [payment.application.fullName, payment.application.application_id, "Failed"])
+        elif response.data.order_status in ["PENDING", "ACTIVE"]:
+            send_interakt_template(payment.application.phone, "payment_status", [payment.application.fullName, payment.application.application_id, "Pending"])
 
         serializer = PaymentSerializer(payment)
         return Response(serializer.data)
@@ -1216,11 +1288,18 @@ def cashfree_webhook(request):
             application = payment.application
             application.payment_status = "Paid"
             application.save()
+            
+            from .utils import send_interakt_template
+            send_interakt_template(application.phone, "payment_status", [application.fullName, application.application_id, "Successful"])
 
         elif event == "PAYMENT_FAILED_WEBHOOK":
 
             payment.status = "FAILED"
             payment.save()
+            
+            application = payment.application
+            from .utils import send_interakt_template
+            send_interakt_template(application.phone, "payment_status", [application.fullName, application.application_id, "Failed"])
 
     except Payment.DoesNotExist:
         pass

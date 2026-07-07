@@ -1,14 +1,16 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { login } from "../../services/api";
+import { validateEmail, validatePassword } from "../../utils/validation";
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [form, setForm] = useState({
-    email: "",
+    email: location.state?.email || "",
     password: ""
   });
 
@@ -21,16 +23,12 @@ const Login = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!form.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!emailRegex.test(form.email)) {
-      newErrors.email = "Please enter a valid email";
-    }
+    const emailErr = validateEmail(form.email);
+    if (emailErr) newErrors.email = emailErr;
 
+    // We only need to check if password is empty for login
     if (!form.password) {
       newErrors.password = "Password is required";
-    } else if (form.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
     }
 
     setErrors(newErrors);
@@ -41,9 +39,15 @@ const Login = () => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
     
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: "" });
+    // Real-time validation
+    let errorMsg = "";
+    if (name === "email") {
+      errorMsg = validateEmail(value);
+    } else if (name === "password") {
+      if (!value) errorMsg = "Password is required";
     }
+
+    setErrors(prev => ({ ...prev, [name]: errorMsg }));
   };
 
   const handleLogin = async (e) => {
@@ -119,7 +123,8 @@ const Login = () => {
                 placeholder="name@example.com"
                 value={form.email}
                 onChange={handleChange}
-                className={`w-full bg-slate-50 py-4 pl-14 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white border border-transparent focus:border-blue-500/30 transition-all font-medium text-slate-700 ${errors.email ? 'border-red-400 bg-red-50' : ''}`}
+                required
+                className={`w-full bg-slate-50 py-4 pl-14 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white border transition-all font-medium text-slate-700 ${errors.email ? 'border-red-400 focus:border-red-500' : 'border-transparent focus:border-blue-500/30'}`}
               />
             </div>
             {errors.email && <p className="text-xs text-red-500 font-bold pl-4">{errors.email}</p>}
@@ -136,7 +141,8 @@ const Login = () => {
                 placeholder="enter password"
                 value={form.password}
                 onChange={handleChange}
-                className={`w-full bg-slate-50 py-4 pl-14 pr-12 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white border border-transparent focus:border-blue-500/30 transition-all font-medium text-slate-700 ${errors.password ? 'border-red-400 bg-red-50' : ''}`}
+                required
+                className={`w-full bg-slate-50 py-4 pl-14 pr-12 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white border transition-all font-medium text-slate-700 ${errors.password ? 'border-red-400 focus:border-red-500' : 'border-transparent focus:border-blue-500/30'}`}
               />
               <button
                 type="button"

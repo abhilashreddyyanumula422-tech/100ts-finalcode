@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import digilockerLogo from "../../assets/digilocker_logo.png";
 import { API_BASE_URL as API_BASE } from "../../services/api";
+import { validateName, validateEmail, validatePhone, restrictNameInput, restrictPhoneInput } from "../../utils/validation";
 
 /* ─────────────────────────────────────────
    GLOBAL STYLES
@@ -1354,7 +1355,7 @@ const UpBlock = ({ type, label, options, upProg, upNames, upCompressed, onFile, 
 /* ─────────────────────────────────────────
    STEP COMPONENTS
 ───────────────────────────────────────── */
-const Step0 = ({ form, onChange, degrees, addDeg, rmDeg, chDeg, upProg, upNames, upCompressed, onFile, delFile, onDigiLocker, onSubmit, adminMessage }) => {
+const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, upNames, upCompressed, onFile, delFile, onDigiLocker, onSubmit, adminMessage }) => {
   const [showManualUpload, setShowManualUpload] = React.useState(false);
 
   return (
@@ -1382,8 +1383,8 @@ const Step0 = ({ form, onChange, degrees, addDeg, rmDeg, chDeg, upProg, upNames,
         {[
           { id: "fullName", label: "Full Name", type: "text", ph: "e.g. Ravi Kumar", req: true },
           { id: "email", label: "Email Address", type: "email", ph: "email@example.com", req: true },
-          { id: "phone", label: "Phone Number", type: "tel", ph: "+91 98765 43210", req: true },
-          { id: "altPhone", label: "Alternative Number", type: "tel", ph: "+91 98765 43210", req: true },
+          { id: "phone", label: "Phone Number", type: "tel", ph: "9876543210", req: true },
+          { id: "altPhone", label: "Alternative Number", type: "tel", ph: "9876543210", req: true },
         ].map(({ id, label, type, ph, req }) => (
           <div className="field" key={id}>
             <label>{label} {req && <span className="req">*</span>}</label>
@@ -1392,10 +1393,17 @@ const Step0 = ({ form, onChange, degrees, addDeg, rmDeg, chDeg, upProg, upNames,
               name={id}
               value={form[id]}
               onChange={onChange}
+              onKeyPress={(e) => {
+                if (id === "fullName") restrictNameInput(e);
+                if (id === "phone" || id === "altPhone") restrictPhoneInput(e);
+              }}
+              maxLength={type === "tel" ? 10 : undefined}
               placeholder={ph}
               autoComplete="off"
               inputMode={type === "tel" ? "numeric" : undefined}
+              style={{ borderColor: errors && errors[id] ? "#ef4444" : undefined }}
             />
+            {errors && errors[id] && <p style={{ color: "#ef4444", fontSize: "11px", fontWeight: 600, marginTop: "2px" }}>{errors[id]}</p>}
           </div>
         ))}
         <div className="field">
@@ -1911,6 +1919,7 @@ export default function Apply() {
   const [applicationId, setApplicationId] = useState(() => localStorage.getItem("applicationId") || null);
   const [appStatus, setAppStatus] = useState("pending");
   const [adminMessage, setAdminMessage] = useState("");
+  const [errors, setErrors] = useState({});
 
   const [form, setForm] = useState(() => {
     const user = JSON.parse(localStorage.getItem("user"));
@@ -2053,7 +2062,16 @@ export default function Apply() {
 
   const onChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
-    setForm(f => ({ ...f, [name]: type === "checkbox" ? checked : value }));
+    const finalValue = type === "checkbox" ? checked : value;
+    setForm(f => ({ ...f, [name]: finalValue }));
+    
+    // Real-time validation
+    let errorMsg = "";
+    if (name === "fullName") errorMsg = validateName(finalValue);
+    else if (name === "email") errorMsg = validateEmail(finalValue);
+    else if (name === "phone" || name === "altPhone") errorMsg = validatePhone(finalValue);
+    
+    setErrors(prev => ({ ...prev, [name]: errorMsg }));
   }, []);
 
   const addDeg = useCallback(() => {
@@ -2132,7 +2150,24 @@ export default function Apply() {
   const onSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.fullName || !form.email || !form.phone || !form.altPhone || !form.requirement || !form.termsAccepted) {
+    const newErrors = {};
+    const nameErr = validateName(form.fullName);
+    if (nameErr) newErrors.fullName = nameErr;
+    const emailErr = validateEmail(form.email);
+    if (emailErr) newErrors.email = emailErr;
+    const phoneErr = validatePhone(form.phone);
+    if (phoneErr) newErrors.phone = phoneErr;
+    const altPhoneErr = validatePhone(form.altPhone);
+    if (altPhoneErr) newErrors.altPhone = altPhoneErr;
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      alert("Please fix the errors in the form before submitting.");
+      return;
+    }
+
+    if (!form.requirement || !form.termsAccepted) {
       alert("Please fill all required fields (*) and accept Terms");
       return;
     }
@@ -2305,7 +2340,7 @@ export default function Apply() {
               >
                 {activeStep === 0 && (
                   <Step0
-                    form={form} onChange={onChange}
+                    form={form} errors={errors} onChange={onChange}
                     degrees={degrees} addDeg={addDeg} rmDeg={rmDeg} chDeg={chDeg}
                     upProg={upProg} upNames={upNames} upCompressed={upCompressed}
                     onFile={onFile} delFile={delFile}

@@ -69,6 +69,7 @@ class Application(models.Model):
     specialCondition = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
+    application_id = models.CharField(max_length=100, unique=True, null=True, blank=True, editable=False)
     tracking_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
     admin_message = models.TextField(null=True, blank=True)
     agent = models.CharField(max_length=100, null=True, blank=True)
@@ -77,6 +78,53 @@ class Application(models.Model):
         choices=STATUS_CHOICES,
         default='pending'
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_status = getattr(self, 'status', None)
+
+    def save(self, *args, **kwargs):
+        is_status_changed = False
+        old_status = getattr(self, '_original_status', None)
+        new_status = getattr(self, 'status', None)
+        
+        # Only trigger if the application already exists (has pk) and status actually changed
+        if self.pk and old_status != new_status:
+            is_status_changed = True
+
+        # Save to generate self.id if it's a new record
+        super().save(*args, **kwargs)
+
+        # Generate a permanent application_id on first creation if not exists
+        if not self.application_id and self.id:
+            # Simple sequential ID starting from 101 (if self.id starts at 1)
+            self.application_id = str(self.id + 100)
+            # Call super().save again to update just this field without triggering full save logic again
+            super().save(update_fields=['application_id'])
+        
+        if is_status_changed:
+            from .utils import send_interakt_template
+            # Send template only on Approved or Rejected
+            if new_status == "approved":
+                send_interakt_template(
+                    phone_number=self.phone,
+                    template_name="request_approved",
+                    variables=[self.fullName, self.application_id],
+                    application_id=self.application_id,
+                    customer_name=self.fullName,
+                    status=new_status
+                )
+            elif new_status == "rejected":
+                send_interakt_template(
+                    phone_number=self.phone,
+                    template_name="request_rejected",
+                    variables=[self.fullName, self.application_id],
+                    application_id=self.application_id,
+                    customer_name=self.fullName,
+                    status=new_status
+                )
+            # Update internal state so it doesn't trigger again on subsequent saves
+            self._original_status = new_status
 
     def __str__(self):
         return self.fullName

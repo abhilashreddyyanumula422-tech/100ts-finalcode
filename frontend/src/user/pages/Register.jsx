@@ -3,6 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Mail, Lock, User, ArrowRight, Phone, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { register } from "../../services/api";
+import { 
+  validateName, 
+  validatePhone, 
+  validateEmail, 
+  validatePassword, 
+  restrictNameInput, 
+  restrictPhoneInput 
+} from "../../utils/validation";
 
 const Register = () => {
   const [form, setForm] = useState({
@@ -25,29 +33,17 @@ const Register = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!form.name.trim()) {
-      newErrors.name = "Name is required";
-    } else if (form.name.trim().length < 2) {
-      newErrors.name = "Name must be at least 2 characters";
-    }
+    const nameErr = validateName(form.name);
+    if (nameErr) newErrors.name = nameErr;
 
-    if (!form.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!emailRegex.test(form.email)) {
-      newErrors.email = "Please enter a valid email";
-    }
+    const emailErr = validateEmail(form.email);
+    if (emailErr) newErrors.email = emailErr;
 
-    if (!form.phone.trim()) {
-      newErrors.phone = "Phone number is required";
-    } else if (!phoneRegex.test(form.phone)) {
-      newErrors.phone = "Enter a valid 10-digit phone number";
-    }
+    const phoneErr = validatePhone(form.phone);
+    if (phoneErr) newErrors.phone = phoneErr;
 
-    if (!form.password) {
-      newErrors.password = "Password is required";
-    } else if (form.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
-    }
+    const passErr = validatePassword(form.password);
+    if (passErr) newErrors.password = passErr;
 
     if (!form.confirmPassword) {
       newErrors.confirmPassword = "Please confirm your password";
@@ -63,9 +59,25 @@ const Register = () => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
 
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: "" });
+    // Real-time validation
+    let errorMsg = "";
+    if (name === "name") errorMsg = validateName(value);
+    else if (name === "email") errorMsg = validateEmail(value);
+    else if (name === "phone") errorMsg = validatePhone(value);
+    else if (name === "password") {
+      errorMsg = validatePassword(value);
+      if (form.confirmPassword && value !== form.confirmPassword) {
+        setErrors(prev => ({ ...prev, confirmPassword: "Passwords do not match" }));
+      } else if (form.confirmPassword) {
+        setErrors(prev => ({ ...prev, confirmPassword: "" }));
+      }
     }
+    else if (name === "confirmPassword") {
+      if (!value) errorMsg = "Please confirm your password";
+      else if (value !== form.password) errorMsg = "Passwords do not match";
+    }
+
+    setErrors(prev => ({ ...prev, [name]: errorMsg }));
   };
 
   const handleRegister = async (e) => {
@@ -84,15 +96,15 @@ const Register = () => {
 
     try {
       const { ok, data } = await register({
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
         password: form.password
       });
 
       if (ok) {
         alert("Registered successfully ✅");
-        navigate("/login");
+        navigate("/login", { state: { email: form.email.trim() } });
       } else {
         alert(data.error || "Registration Failed");
       }
@@ -136,10 +148,12 @@ const Register = () => {
                   placeholder="Your Name"
                   value={form.name}
                   onChange={handleChange}
+                  onKeyPress={restrictNameInput}
                   required
-                  className="w-full bg-slate-50 py-4 pl-14 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white border border-transparent focus:border-blue-500/30 transition-all font-medium text-slate-700"
+                  className={`w-full bg-slate-50 py-4 pl-14 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white border transition-all font-medium text-slate-700 ${errors.name ? 'border-red-400 focus:border-red-500' : 'border-transparent focus:border-blue-500/30'}`}
                 />
               </div>
+              {errors.name && <p className="text-red-500 text-xs font-semibold pl-4">{errors.name}</p>}
             </div>
 
             {/* PHONE */}
@@ -153,10 +167,13 @@ const Register = () => {
                   placeholder="9876543210"
                   value={form.phone}
                   onChange={handleChange}
+                  onKeyPress={restrictPhoneInput}
+                  maxLength={10}
                   required
-                  className="w-full bg-slate-50 py-4 pl-14 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white border border-transparent focus:border-blue-500/30 transition-all font-medium text-slate-700"
+                  className={`w-full bg-slate-50 py-4 pl-14 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white border transition-all font-medium text-slate-700 ${errors.phone ? 'border-red-400 focus:border-red-500' : 'border-transparent focus:border-blue-500/30'}`}
                 />
               </div>
+              {errors.phone && <p className="text-red-500 text-xs font-semibold pl-4">{errors.phone}</p>}
             </div>
           </div>
 
@@ -172,9 +189,10 @@ const Register = () => {
                 value={form.email}
                 onChange={handleChange}
                 required
-                className="w-full bg-slate-50 py-4 pl-14 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white border border-transparent focus:border-blue-500/30 transition-all font-medium text-slate-700"
+                className={`w-full bg-slate-50 py-4 pl-14 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white border transition-all font-medium text-slate-700 ${errors.email ? 'border-red-400 focus:border-red-500' : 'border-transparent focus:border-blue-500/30'}`}
               />
             </div>
+            {errors.email && <p className="text-red-500 text-xs font-semibold pl-4">{errors.email}</p>}
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
@@ -190,7 +208,7 @@ const Register = () => {
                   value={form.password}
                   onChange={handleChange}
                   required
-                  className="w-full bg-slate-50 py-4 pl-14 pr-12 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white border border-transparent focus:border-blue-500/30 transition-all font-medium text-slate-700"
+                  className={`w-full bg-slate-50 py-4 pl-14 pr-12 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white border transition-all font-medium text-slate-700 ${errors.password ? 'border-red-400 focus:border-red-500' : 'border-transparent focus:border-blue-500/30'}`}
                 />
                 <button
                   type="button"
@@ -200,6 +218,7 @@ const Register = () => {
                   {showPassword ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
                 </button>
               </div>
+              {errors.password && <p className="text-red-500 text-xs font-semibold pl-4">{errors.password}</p>}
             </div>
 
             {/* CONFIRM PASSWORD */}
@@ -214,7 +233,7 @@ const Register = () => {
                   value={form.confirmPassword}
                   onChange={handleChange}
                   required
-                  className="w-full bg-slate-50 py-4 pl-14 pr-12 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white border border-transparent focus:border-blue-500/30 transition-all font-medium text-slate-700"
+                  className={`w-full bg-slate-50 py-4 pl-14 pr-12 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white border transition-all font-medium text-slate-700 ${errors.confirmPassword ? 'border-red-400 focus:border-red-500' : 'border-transparent focus:border-blue-500/30'}`}
                 />
                 <button
                   type="button"
@@ -224,6 +243,7 @@ const Register = () => {
                   {showConfirmPassword ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
                 </button>
               </div>
+              {errors.confirmPassword && <p className="text-red-500 text-xs font-semibold pl-4">{errors.confirmPassword}</p>}
             </div>
           </div>
 
