@@ -10,7 +10,9 @@ from .views import (
     CreateCashfreeOrder,
     VerifyPayment,
     PaymentDetail,
-    cashfree_webhook
+    cashfree_webhook,
+    RefundPayment,
+    get_dashboard_stats
 )
 
 urlpatterns = [
@@ -18,6 +20,7 @@ urlpatterns = [
     path('register/', views.register_user),
     path('verify/', views.login_user),
 
+    path("dashboard-stats/", get_dashboard_stats),
     path("contact/", views.contact_api),
     path("add_college/", views.add_college),
     path("allcolleges/", views.get_all_colleges),
@@ -73,6 +76,11 @@ urlpatterns = [
     cashfree_webhook,
     name="cashfree-webhook"
 ),
+   path(
+    "refund/",
+    RefundPayment.as_view(),
+    name="refund-payment"
+),
     
- 
+
 ]

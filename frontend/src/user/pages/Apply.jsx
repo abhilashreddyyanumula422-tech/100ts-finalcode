@@ -2203,9 +2203,9 @@ export default function Apply() {
       } else {
         alert(data.error || "Submission failed");
       }
-    } catch {
+    } catch (error) {
       // Frontend error handled silently
-      alert("Something went wrong");
+      alert("Something went wrong: " + error.message);
     }
   };
 
@@ -2291,7 +2291,7 @@ export default function Apply() {
       });
     } catch (error) {
       console.error("Payment Error:", error);
-      alert("Payment error ❌");
+      alert("Payment error ❌: " + error.message);
     }
   };
 

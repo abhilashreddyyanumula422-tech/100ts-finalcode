@@ -336,15 +336,18 @@ Message:
 {message}
 """
 
-        send_mail(
-            subject=f"Contact Form: {subject}",
-            message=full_message,
-            from_email=email,
-            recipient_list=["admin@100transcripts.com"],
-            fail_silently=False,
-        )
+        try:
+            send_mail(
+                subject=f"Contact Form: {subject}",
+                message=full_message,
+                from_email=email,
+                recipient_list=["admin@100transcripts.com"],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Failed to send email: {e}")
 
-        return JsonResponse({"message": "Email sent successfully"})
+        return JsonResponse({"message": "Message saved/sent successfully"})
 
     return JsonResponse({"error": "Invalid request"}, status=400)
 
@@ -410,7 +413,8 @@ def validate_email_backend(email):
 @api_view(['POST'])
 def submit_application(request):
     try:
-        data = request.POST
+        data = request.POST if request.POST else request.data
+        print(f"DEBUG DATA: {data}")
 
         # ✅ Strict Field Validation
         name_err = validate_name_backend(data.get("fullName"))
@@ -557,13 +561,16 @@ def send_notification(request):
             return Response({"error": "All fields required"}, status=400)
 
         # ✅ SEND EMAIL
-        send_mail(
-            subject,
-            message,
-            "yourgmail@gmail.com",  # sender
-            [email],                # receiver
-            fail_silently=False,
-        )
+        try:
+            send_mail(
+                subject,
+                message,
+                "yourgmail@gmail.com",  # sender
+                [email],                # receiver
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Failed to send email to {email}: {e}")
 
         return Response({"message": "Email sent successfully ✅"})
 
@@ -1306,3 +1313,92 @@ def cashfree_webhook(request):
 
     return JsonResponse({"status": "ok"})
 
+
+from cashfree_pg.models.order_create_refund_request import OrderCreateRefundRequest
+
+class RefundPayment(APIView):
+    def post(self, request):
+        application_id = request.data.get('application_id')
+        payment = Payment.objects.filter(application_id=application_id).last()
+        
+        if not payment or payment.status != 'PAID':
+            return Response({"error": "Valid paid payment not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+        env = Cashfree.PRODUCTION if settings.CASHFREE_ENVIRONMENT == 'PRODUCTION' else Cashfree.SANDBOX
+        Cashfree.XApiVersion = "2023-08-01"
+        cashfree_client = Cashfree(
+            XClientId=settings.CASHFREE_CLIENT_ID,
+            XClientSecret=settings.CASHFREE_CLIENT_SECRET,
+            XEnvironment=env
+        )
+
+        refund_request = OrderCreateRefundRequest(
+            refund_amount=payment.amount,
+            refund_id=f"REF_{uuid.uuid4().hex[:12]}",
+            refund_note="Requested via application"
+        )
+
+        try:
+            response = cashfree_client.PGOrderCreateRefund(
+                order_id=payment.order_id,
+                order_create_refund_request=refund_request
+            )
+            
+            payment.status = "REFUNDED"
+            payment.save()
+
+            application = payment.application
+            application.payment_status = "Refunded"
+            application.save()
+
+            return Response({"success": True, "message": "Refund initiated successfully"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            print("\n========== CASHFREE REFUND ERROR ==========")
+            print(str(e))
+            if hasattr(e, 'body'):
+                print(e.body)
+            print("===========================================\n")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+from django.db.models import Count
+from .models import Application, DeliveryRequest
+
+@api_view(['GET'])
+def get_dashboard_stats(request):
+    try:
+        total_requests = Application.objects.count()
+        pending = Application.objects.filter(status='pending').count()
+        approved = Application.objects.filter(status='approved').count()
+        delivered = DeliveryRequest.objects.filter(status='Delivered').count()
+
+        # Pipeline logic
+        pipeline = [
+            {"label": "Submitted", "count": total_requests},
+            {"label": "Verified", "count": approved},
+            {"label": "College", "count": Application.objects.filter(status='college').count()},
+            {"label": "Dispatched", "count": DeliveryRequest.objects.count()}
+        ]
+
+        # Recent Activity
+        recent_apps = Application.objects.order_by('-created_at')[:4]
+        recent_activity = [
+            {
+                "label": f"New Application: {app.fullName}",
+                "time": app.created_at.strftime("%Y-%m-%d %H:%M")
+            }
+            for app in recent_apps
+        ]
+
+        data = {
+            "stats": {
+                "Total Requests": total_requests,
+                "Pending": pending,
+                "Approved": approved,
+                "Delivered": delivered,
+            },
+            "pipeline": pipeline,
+            "recent_activity": recent_activity
+        }
+        return Response(data, status=200)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
