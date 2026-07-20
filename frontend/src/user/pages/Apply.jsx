@@ -1421,7 +1421,7 @@ const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, 
         </div>
       </div>
 
-      <div className="sec-title">Academic Degrees (Optional)</div>
+      <div className="sec-title">Academic Information <span className="req">*</span></div>
       {degrees.length === 0 ? (
         <div className="optional-deg-box" onClick={addDeg}>
           <div className="opt-icon">🎓</div>
@@ -1437,7 +1437,9 @@ const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, 
             <div className="degree-card" key={d.id}>
               <div className="deg-header">
                 <span className="deg-num">Degree {d.id}</span>
-                <button type="button" className="btn-rm" onClick={() => rmDeg(d.id)}>✕ Remove</button>
+                {degrees.length > 1 && (
+                  <button type="button" className="btn-rm" onClick={() => rmDeg(d.id)}>✕ Remove</button>
+                )}
               </div>
               <div className="form-grid">
                 <div className="field">
@@ -1582,32 +1584,38 @@ const Step1 = ({ form: _form, goStep, handlePayment }) => (
   </div>
 );
 
-const Step2 = ({ appStatus, adminMessage, goStep, onRetry }) => {
+const Step2 = ({ appStatus, adminMessage, rejectionReason, goStep, onRetry }) => {
+  const isPendingApproval = appStatus === "pending_approval";
   const isPending = appStatus === "pending";
+  const isWaiting = isPendingApproval || isPending;
   const isApproved = appStatus === "approved";
   const isRejected = appStatus === "rejected";
 
   return (
     <div>
       <div className="step-header">
-        <div className={`step-icon ${isRejected ? "icon-amber" : "icon-blue"}`}>
-          {isRejected ? "❌" : isApproved ? "✅" : "🔍"}
+        <div className={`step-icon ${isRejected ? "icon-amber" : isApproved ? "icon-sky" : "icon-blue"}`}>
+          {isRejected ? "❌" : isApproved ? "✅" : "⏳"}
         </div>
         <div>
           <div className="step-title">
-            {isRejected ? "Action Required" : isApproved ? "Documents Verified" : "Document Review"}
+            {isRejected ? "Application Rejected" : isApproved ? "Documents Verified" : "Waiting for Admin Approval"}
           </div>
           <div className="step-subtitle">
-            {isRejected ? "Some issues were found with your submission" : isApproved ? "Your documents have been approved! Please proceed to payment" : "Our experts are carefully verifying your documents"}
+            {isRejected
+              ? "Your application was rejected by the admin"
+              : isApproved
+              ? "Your documents have been approved! Please proceed to payment"
+              : "Your application has been submitted and is pending admin review"}
           </div>
         </div>
       </div>
 
-      {isPending && (
+      {isWaiting && (
         <div className="info-panel blue">
           <span className="info-icon">⏳</span>
-          <h3>Review in Progress</h3>
-          <p>Your documents are being checked for authenticity &amp; completeness.<br /><strong>Estimated: 24–48 business hours</strong></p>
+          <h3>Pending Admin Approval</h3>
+          <p>Your application has been submitted successfully and is waiting for admin approval.<br /><strong>Estimated: 24–48 business hours</strong></p>
         </div>
       )}
 
@@ -1621,33 +1629,33 @@ const Step2 = ({ appStatus, adminMessage, goStep, onRetry }) => {
 
       {isRejected && (
         <div className="info-panel amber">
-          <span className="info-icon">⚠️</span>
-          <h3>Issue Detected</h3>
+          <span className="info-icon">❌</span>
+          <h3>Application Rejected</h3>
           <div style={{ background: "rgba(255,255,255,0.6)", padding: "12px", borderRadius: "10px", margin: "10px 0", border: "1px solid #fde68a" }}>
-            <p style={{ fontWeight: 700, color: "#92400e", marginBottom: 4 }}>Message from Admin:</p>
-            <p style={{ color: "#b45309", fontSize: "14px" }}>{adminMessage || "Please check your documents and retry."}</p>
+            <p style={{ fontWeight: 700, color: "#92400e", marginBottom: 4 }}>Rejection Reason:</p>
+            <p style={{ color: "#b45309", fontSize: "14px" }}>{rejectionReason || adminMessage || "Your application was rejected. Please contact support for more information."}</p>
           </div>
-          <p>Please click retry to go back to the form and fix the issues.</p>
+          <p>Please contact our support team or submit a new application.</p>
         </div>
       )}
 
       <div className="timeline">
         <TlItem icon="✅" bg="#e0f2fe" title="Documents Submitted" desc="All documents received." badge="bdone" />
         <TlItem
-          icon={isApproved ? "✅" : "🔍"}
+          icon={isApproved ? "✅" : isRejected ? "❌" : "⏳"}
           bg={isApproved ? "#e0f2fe" : isRejected ? "#fee2e2" : "#dbeafe"}
-          title="Document Review"
-          desc={isRejected ? "Issues found by admin." : isApproved ? "Verification cleared!" : "Experts checking authenticity."}
+          title="Admin Approval"
+          desc={isRejected ? "Application was rejected." : isApproved ? "Admin approved!" : "Waiting for admin review."}
           badge={isApproved ? "bdone" : isRejected ? "bwait" : "bprog"}
         />
-        <TlItem icon="💳" bg="#f1f5f9" title="Secure Payment" desc="Proceed to payment after review." badge="bwait" />
+        <TlItem icon="💳" bg="#f1f5f9" title="Secure Payment" desc="Proceed to payment after approval." badge={isApproved ? "bprog" : "bwait"} />
         <TlItem icon="🏛️" bg="#f1f5f9" title="University Verification" desc="Sent to university after payment." badge="bwait" last />
       </div>
 
       <div className="actions">
         {isRejected && (
           <button className="btn-primary" onClick={onRetry}>
-            🔄 &nbsp;Retry Submission
+            🔄 &nbsp;Submit New Application
           </button>
         )}
         {isApproved && (
@@ -1655,9 +1663,9 @@ const Step2 = ({ appStatus, adminMessage, goStep, onRetry }) => {
             💳 &nbsp;Proceed to Payment
           </button>
         )}
-        {isPending && (
+        {isWaiting && (
           <button className="btn-secondary" disabled style={{ opacity: 0.6, cursor: "not-allowed" }}>
-            ⏳ &nbsp;Waiting for Admin...
+            ⏳ &nbsp;Waiting for Admin Approval...
           </button>
         )}
       </div>
@@ -1917,8 +1925,9 @@ export default function Apply() {
   const [animKey, setAnimKey] = useState(0);
 
   const [applicationId, setApplicationId] = useState(() => localStorage.getItem("applicationId") || null);
-  const [appStatus, setAppStatus] = useState("pending");
+  const [appStatus, setAppStatus] = useState("pending_approval");
   const [adminMessage, setAdminMessage] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
   const [errors, setErrors] = useState({});
 
   const [form, setForm] = useState(() => {
@@ -1939,7 +1948,7 @@ export default function Apply() {
   const [upProg, setUpProg] = useState({ cmm: 0, degree: 0, internship: 0 });
   const [upNames, setUpNames] = useState({ cmm: null, degree: null, internship: null });
   const [upCompressed, setUpCompressed] = useState({ cmm: null, degree: null, internship: null });
-  const [degrees, setDegrees] = useState([]);
+  const [degrees, setDegrees] = useState([{ id: 1, type: "", university: "", course: "", college: "" }]);
 
   const [digiModal, setDigiModal] = useState({ open: false, type: null, label: "" });
   const hasAppliedUniversityRef = useRef(false);
@@ -2003,6 +2012,7 @@ export default function Apply() {
           if (data.status) {
             setAppStatus(data.status);
             setAdminMessage(data.admin_message || "");
+            setRejectionReason(data.rejection_reason || "");
             if (data.application_id) {
               setApplicationId(data.application_id);
               localStorage.setItem("applicationId", data.application_id);
@@ -2016,10 +2026,10 @@ export default function Apply() {
             if (data.status === "approved") {
               if (data.payment_status === "Paid") goStep(3);
               else goStep(2);
-            } else if (data.status === "pending") {
+            } else if (data.status === "pending_approval" || data.status === "pending") {
               goStep(1);
             } else if (data.status === "rejected") {
-              goStep(0); // Go to form to show rejection message
+              goStep(1); // Stay on waiting screen to show rejection reason
             } else if (data.status === "delivered") {
               goStep(4);
             }
@@ -2043,6 +2053,7 @@ export default function Apply() {
           if (data.status) {
             setAppStatus(data.status);
             setAdminMessage(data.admin_message || "");
+            setRejectionReason(data.rejection_reason || "");
             if (data.status === "approved") {
               // keep step 1, but Step2 will show proceed to payment
             } else if (data.status === "delivered") {
@@ -2172,6 +2183,12 @@ export default function Apply() {
       return;
     }
 
+    const hasValidDegree = degrees.length > 0 && degrees.some(d => d.university && d.university.trim() !== "");
+    if (!hasValidDegree) {
+      alert("Please provide your University / Board details.");
+      return;
+    }
+
     const trackingId = "TRK" + Date.now().toString().slice(-6);
 
     try {
@@ -2193,10 +2210,11 @@ export default function Apply() {
 
       const data = await res.json();
       if (res.ok) {
-        alert(`Application Submitted ✅\nAdmin will now verify your documents.`);
+        alert("Your application has been submitted successfully and is waiting for admin approval.");
         setApplicationId(data.application_id);
-        setAppStatus("pending");
+        setAppStatus("pending_approval");
         setAdminMessage("");
+        setRejectionReason("");
         localStorage.setItem("applicationId", data.application_id);
         localStorage.setItem("flowType", flowType); // Persist flowType locally
         goStep(1);
@@ -2312,9 +2330,11 @@ export default function Apply() {
     setUpProg({ cmm: 0, degree: 0, internship: 0 });
     setUpNames({ cmm: null, degree: null, internship: null });
     setUpCompressed({ cmm: null, degree: null, internship: null });
+    setDegrees([{ id: 1, type: "", university: "", course: "", college: "" }]);
     setApplicationId(null);
-    setAppStatus("pending");
+    setAppStatus("pending_approval");
     setAdminMessage("");
+    setRejectionReason("");
     setFlowType(null);
     localStorage.removeItem("applicationId");
     localStorage.removeItem("flowType");
@@ -2353,6 +2373,7 @@ export default function Apply() {
                   <Step2
                     appStatus={appStatus}
                     adminMessage={adminMessage}
+                    rejectionReason={rejectionReason}
                     goStep={goStep}
                     onRetry={() => goStep(0)}
                   />

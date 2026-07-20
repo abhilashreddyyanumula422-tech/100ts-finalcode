@@ -443,6 +443,7 @@ def submit_application(request):
             termsAccepted=str(data.get("termsAccepted")).lower() == "true",
             specialCondition=str(data.get("specialCondition")).lower() == "true",
             tracking_id=data.get("trackingId", "").strip() or None,
+            status='pending_approval',
         )
 
         # ✅ Degrees (OPTIONAL + SAFE)
@@ -477,14 +478,14 @@ def submit_application(request):
                 file=file
             )
 
-        from .utils import send_notification_helper
-        send_notification_helper(
-            email=app.email,
-            phone=app.phone,
-            subject="Application Submitted Successfully",
-            message=f"Hello {app.fullName},\n\nYour application has been received and is being processed.",
-            whatsapp_template=settings.INTERAKT_TEMPLATE_NAME,
-            whatsapp_data=[app.fullName, "Submitted"]
+        from .utils import send_interakt_template
+        send_interakt_template(
+            phone_number=app.phone,
+            template_name="request_pending",
+            variables=[app.fullName, app.application_id or str(app.id)],
+            application_id=app.application_id,
+            customer_name=app.fullName,
+            status="pending_approval"
         )
 
         return Response({
@@ -592,6 +593,11 @@ def update_status(request, id=None):
         status = data.get("status")
         agent = data.get("agent")
         admin_message = data.get("admin_message")
+        rejection_reason = data.get("rejection_reason")
+
+        # Validate: rejection reason is mandatory when rejecting
+        if status == "rejected" and not (rejection_reason or "").strip():
+            return JsonResponse({"error": "Rejection reason is required when rejecting an application."}, status=400)
 
         try:
             if id:
@@ -606,12 +612,14 @@ def update_status(request, id=None):
                 app.agent = agent
             if admin_message is not None:
                 app.admin_message = admin_message
+            if status == "rejected" and rejection_reason:
+                app.rejection_reason = rejection_reason.strip()
             app.save()
             
             from .utils import send_interakt_template
             
             # --- START WHATSAPP NOTIFICATION LOGIC ---
-            # Note: 'Approved' and 'Rejected' are handled automatically by the Application model's save() override.
+            # Note: 'Approved', 'Rejected', and 'Pending Approval' are handled automatically by the Application model's save() override.
             if status == "Dispatched":
                 courier = data.get("courier_partner", "Standard Courier")
                 tracking = data.get("tracking_id", app.tracking_id or "N/A")
@@ -648,6 +656,7 @@ def get_app_status(request, id):
         return Response({
             "status": app.status,
             "admin_message": app.admin_message,
+            "rejection_reason": app.rejection_reason,
             "payment_status": app.payment_status,
             "tracking_id": app.tracking_id
         })
@@ -670,6 +679,7 @@ def get_application_status(request):
         return Response({
             "status": app.status,
             "admin_message": app.admin_message,
+            "rejection_reason": app.rejection_reason,
             "payment_status": app.payment_status,
             "fullName": app.fullName,
             "tracking_id": app.tracking_id,

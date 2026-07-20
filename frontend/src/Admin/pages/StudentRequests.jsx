@@ -24,6 +24,10 @@ const StudentRequests = () => {
   const [copied, setCopied] = useState(false);
   const companyName = "100 Transcripts";
 
+  // --- Rejection Reason Modal State ---
+  const [rejectingStudent, setRejectingStudent] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+
   // ✅ FETCH API
   useEffect(() => {
     const fetchRequests = async () => {
@@ -66,11 +70,15 @@ const StudentRequests = () => {
     }
   };
 
-  const updateStatus = async (id, newStatus, message = "", agent = null) => {
+  const updateStatus = async (id, newStatus, message = "", agent = null, rejReason = null) => {
     try {
-      const response = await updateApplicationStatus(id, newStatus, message, agent);
+      const response = await updateApplicationStatus(id, newStatus, message, agent, rejReason);
 
-      if (!response.ok) throw new Error("Update failed");
+      if (!response.ok) {
+        const errMsg = response.data?.error || "Update failed";
+        alert("❌ " + errMsg);
+        return;
+      }
 
       // Refetch requests to update the UI
       const fetchUpdatedRequests = async () => {
@@ -89,7 +97,19 @@ const StudentRequests = () => {
       alert("Failed to update status");
     }
   };
+
+  // --- Rejection Handler ---
+  const handleRejectConfirm = async () => {
+    if (!rejectionReason.trim()) {
+      alert("Please enter a rejection reason.");
+      return;
+    }
+    await updateStatus(rejectingStudent.raw_id, "rejected", "", null, rejectionReason.trim());
+    setRejectingStudent(null);
+    setRejectionReason("");
+  };
   const stages = [
+    "pending_approval",
     "pending",
     "approved",
     "document_review",
@@ -100,6 +120,7 @@ const StudentRequests = () => {
   ];
 
   const total = requests.length;
+  const pendingApproval = requests.filter(r => String(r.status || "").toLowerCase().trim() === "pending_approval").length;
   const pending = requests.filter(r => String(r.status || "").toLowerCase().trim() === "pending").length;
   const verified = requests.filter(r => String(r.status || "").toLowerCase().trim() === "approved").length;
   const rejected = requests.filter(r => String(r.status || "").toLowerCase().trim() === "rejected").length;
@@ -173,11 +194,17 @@ Please check your email for detailed information or contact us if you have any q
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-5">
         <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-400 text-white shadow-lg">
           <div className="flex justify-between">
             <div><p className="text-sm opacity-80">Total</p><h2 className="text-3xl font-bold">{total}</h2></div>
             <Users />
+          </div>
+        </div>
+        <div className="p-5 rounded-2xl bg-orange-100 text-orange-700 shadow">
+          <div className="flex justify-between">
+            <div><p className="text-sm">Pending Approval</p><h2 className="text-3xl font-bold">{pendingApproval}</h2></div>
+            <Clock />
           </div>
         </div>
         <div className="p-5 rounded-2xl bg-yellow-100 text-yellow-700 shadow">
@@ -294,18 +321,19 @@ Please check your email for detailed information or contact us if you have any q
                 {/* STATUS */}
                 <td className="p-4">
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-bold ${String(req.status || "")
-                        .toLowerCase()
-                        .trim() === "approved"
+                    className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      String(req.status || "").toLowerCase().trim() === "approved"
                         ? "bg-green-100 text-green-700"
-                        : String(req.status || "")
-                          .toLowerCase()
-                          .trim() === "pending"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
+                        : String(req.status || "").toLowerCase().trim() === "pending_approval"
+                          ? "bg-orange-100 text-orange-700"
+                          : String(req.status || "").toLowerCase().trim() === "pending"
+                            ? "bg-yellow-100 text-yellow-700"
+                            : String(req.status || "").toLowerCase().trim() === "rejected"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-slate-100 text-slate-700"
+                    }`}
                   >
-                    {req.status || "Pending"}
+                    {req.status === "pending_approval" ? "Pending Approval" : req.status || "Pending"}
                   </span>
                 </td>
 
@@ -356,8 +384,8 @@ Please check your email for detailed information or contact us if you have any q
               <div className="space-y-3">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Status</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {["All", "Pending", "Approved", "Rejected"].map((status) => (
-                    <button key={status} onClick={() => setStatusFilter(status)} className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${statusFilter === status ? "bg-blue-600 text-white shadow-md" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+                  {["All", "Pending Approval", "Pending", "Approved", "Rejected"].map((status) => (
+                    <button key={status} onClick={() => setStatusFilter(status === "Pending Approval" ? "pending_approval" : status)} className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${statusFilter === (status === "Pending Approval" ? "pending_approval" : status) ? "bg-blue-600 text-white shadow-md" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
                       {status}
                     </button>
                   ))}
@@ -522,7 +550,6 @@ Please check your email for detailed information or contact us if you have any q
                 </div>
 
                 {/* Action Buttons */}
-                {/* Action Buttons */}
                 <div className="pt-6 border-t border-slate-100">
 
                   {/* Approve + Reject Row */}
@@ -541,7 +568,10 @@ Please check your email for detailed information or contact us if you have any q
                     </button>
 
                     <button
-                      onClick={() => updateStatus(selectedStudent.raw_id, "rejected")}
+                      onClick={() => {
+                        setRejectingStudent(selectedStudent);
+                        setRejectionReason("");
+                      }}
                       disabled={selectedStudent.status === "rejected"}
                       className={`flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition
         ${selectedStudent.status === "rejected"
@@ -599,6 +629,69 @@ Please check your email for detailed information or contact us if you have any q
                   <p className="text-sm font-bold text-slate-700">{selectedStudent.assigned}</p>
                   <p className="text-xs text-slate-500 mt-1">Delivery via: {selectedStudent.delivery}</p>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- REJECTION REASON MODAL --- */}
+      {rejectingStudent && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-6 space-y-5">
+              <div className="flex justify-between items-center border-b pb-3">
+                <h2 className="text-xl font-bold text-red-600 flex items-center gap-2">
+                  <XCircle size={22} /> Reject Application
+                </h2>
+                <button
+                  onClick={() => { setRejectingStudent(null); setRejectionReason(""); }}
+                  className="hover:bg-slate-100 p-1 rounded-full transition"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-600 mb-1">
+                  Rejecting application for <strong>{rejectingStudent.fullName}</strong> ({rejectingStudent.id})
+                </p>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Rejection Reason <span className="text-red-500">*</span></label>
+                <textarea
+                  rows="4"
+                  className="w-full border rounded-xl p-3 mt-1 outline-none focus:ring-2 focus:ring-red-400 text-sm"
+                  placeholder="Enter the reason for rejecting this application (mandatory)..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                />
+                {!rejectionReason.trim() && (
+                  <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                    <AlertCircle size={12} /> Rejection reason is required
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setRejectingStudent(null); setRejectionReason(""); }}
+                  className="flex-1 py-3 rounded-xl font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRejectConfirm}
+                  disabled={!rejectionReason.trim()}
+                  className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition ${
+                    rejectionReason.trim()
+                      ? "bg-red-600 text-white hover:bg-red-700 shadow-lg"
+                      : "bg-red-200 text-red-400 cursor-not-allowed"
+                  }`}
+                >
+                  <XCircle size={18} /> Confirm Rejection
+                </button>
               </div>
             </div>
           </div>

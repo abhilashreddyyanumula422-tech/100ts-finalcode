@@ -52,6 +52,7 @@ from django.db import models
 
 class Application(models.Model):
     STATUS_CHOICES = [
+        ('pending_approval', 'Pending Approval'),
         ('pending', 'Pending'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
@@ -72,11 +73,12 @@ class Application(models.Model):
     application_id = models.CharField(max_length=100, unique=True, null=True, blank=True, editable=False)
     tracking_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
     admin_message = models.TextField(null=True, blank=True)
+    rejection_reason = models.TextField(null=True, blank=True)
     agent = models.CharField(max_length=100, null=True, blank=True)
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='pending'
+        default='pending_approval'
     )
 
     def __init__(self, *args, **kwargs):
@@ -104,8 +106,17 @@ class Application(models.Model):
         
         if is_status_changed:
             from .utils import send_interakt_template
-            # Send template only on Approved or Rejected
-            if new_status == "approved":
+            # Send WhatsApp template based on new status
+            if new_status == "pending_approval":
+                send_interakt_template(
+                    phone_number=self.phone,
+                    template_name="request_pending",
+                    variables=[self.fullName, self.application_id or str(self.id)],
+                    application_id=self.application_id,
+                    customer_name=self.fullName,
+                    status=new_status
+                )
+            elif new_status == "approved":
                 send_interakt_template(
                     phone_number=self.phone,
                     template_name="request_approved",
@@ -118,7 +129,7 @@ class Application(models.Model):
                 send_interakt_template(
                     phone_number=self.phone,
                     template_name="request_rejected",
-                    variables=[self.fullName, self.application_id],
+                    variables=[self.fullName, self.application_id, self.rejection_reason or ""],
                     application_id=self.application_id,
                     customer_name=self.fullName,
                     status=new_status

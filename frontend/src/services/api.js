@@ -178,11 +178,12 @@ export const sendNotification = async (email, subject, message) => {
   return apiPost("/api/send-notification/", { email, subject, message });
 };
 
-export const updateApplicationStatus = async (id, status, adminMessage, agent) => {
+export const updateApplicationStatus = async (id, status, adminMessage, agent, rejectionReason) => {
   return apiPost(`/api/application/${id}/update-status/`, {
     status,
     admin_message: adminMessage,
-    agent
+    agent,
+    rejection_reason: rejectionReason || null
   });
 };
 
