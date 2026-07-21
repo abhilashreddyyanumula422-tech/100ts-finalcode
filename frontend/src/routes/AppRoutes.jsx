@@ -55,6 +55,7 @@ const AdminAgentTracking = lazy(() => import("../Admin/pages/AdminAgentTracking"
 /* ================= AGENT ================= */
 import AgentLayout from "../agent/layout/AgentLayout";
 const AgentLogin = lazy(() => import("../agent/pages/AgentLogin"));
+const DeliveryLogin = lazy(() => import("../agent/pages/DeliveryLogin"));
 const AgentDashboard = lazy(() => import("../agent/pages/AgentDashboard"));
 const AgentRequestDetail = lazy(() => import("../agent/pages/AgentRequestDetail"));
 
@@ -129,6 +130,7 @@ const AppRoutes = () => {
 
         {/* ================= AGENT ROUTES ================= */}
         <Route path="/agent/login" element={<AgentLogin />} />
+        <Route path="/delivery/login" element={<DeliveryLogin />} />
         <Route path="/agent" element={<AgentProtectedRoute />}>
           <Route element={<AgentLayout />}>
             <Route path="dashboard" element={<AgentDashboard />} />

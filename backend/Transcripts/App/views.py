@@ -645,6 +645,7 @@ def update_status(request, id=None):
         agent = data.get("agent")
         admin_message = data.get("admin_message")
         rejection_reason = data.get("rejection_reason")
+        service_fee = data.get("service_fee")
 
         # Validate: rejection reason is mandatory when rejecting
         if status == "rejected" and not (rejection_reason or "").strip():
@@ -669,6 +670,8 @@ def update_status(request, id=None):
                 app.admin_message = admin_message
             if status == "rejected" and rejection_reason:
                 app.rejection_reason = rejection_reason.strip()
+            if service_fee is not None:
+                app.service_fee = service_fee
             app.save()
             
             from .utils import send_interakt_template
@@ -713,7 +716,8 @@ def get_app_status(request, id):
             "admin_message": app.admin_message,
             "rejection_reason": app.rejection_reason,
             "payment_status": app.payment_status,
-            "tracking_id": app.tracking_id
+            "tracking_id": app.tracking_id,
+            "service_fee": app.service_fee
         })
     except Application.DoesNotExist:
         return Response({"error": "Application not found"}, status=404)
@@ -731,14 +735,37 @@ def get_application_status(request):
         else:
             return Response({"error": "Tracking ID or Email required"}, status=400)
             
+        # Fetch agent assignment and decision record
+        assignment = getattr(app, 'agent_assignment', None)
+        decision = getattr(assignment, 'decision_record', None) if assignment else None
+        
+        # Build document list
+        documents = [{"id": doc.id, "name": doc.name, "url": request.build_absolute_uri(doc.file.url)} for doc in app.documents.all()]
+        if assignment and assignment.collected_document_url:
+            documents.append({"id": "collected", "name": "Final Certificate", "url": assignment.collected_document_url})
+
         return Response({
             "status": app.status,
+            "agent_status": assignment.status if assignment else None,
             "admin_message": app.admin_message,
             "rejection_reason": app.rejection_reason,
             "payment_status": app.payment_status,
             "fullName": app.fullName,
             "tracking_id": app.tracking_id,
-            "application_id": app.id
+            "application_id": app.id,
+            "service_fee": app.service_fee,
+            "documents": documents,
+            "courier_partner": assignment.courier_partner if assignment else None,
+            "agent_tracking_id": assignment.tracking_id if assignment else None,
+            "tracking_url": assignment.tracking_url if assignment else None,
+            "decision": {
+                "decision": decision.decision,
+                "rejection_reason": decision.rejection_reason,
+                "remarks": decision.remarks,
+                "rejection_letter_url": request.build_absolute_uri(decision.rejection_letter.url) if decision.rejection_letter else None,
+                "required_documents": decision.required_documents,
+                "deadline": decision.deadline.isoformat() if decision.deadline else None,
+            } if decision else None
         })
     except Application.DoesNotExist:
         return Response({"error": "Application not found"}, status=404)
@@ -1198,19 +1225,22 @@ class CreateCashfreeOrder(APIView):
 
         # DYNAMIC PRICING CALCULATION
         order_amount = 1.00 # Fallback default
-        first_degree = application.degrees.first()
-        if first_degree and first_degree.university:
-            from .models import Certificate
-            try:
-                # Find the certificate price mapping
-                cert = Certificate.objects.filter(
-                    college__name__icontains=first_degree.university,
-                    name__icontains=application.requirement
-                ).first()
-                if cert and cert.price > 0:
-                    order_amount = float(cert.price)
-            except Exception as e:
-                print(f"Failed to fetch dynamic price: {e}")
+        if application.service_fee and application.service_fee > 0:
+            order_amount = float(application.service_fee)
+        else:
+            first_degree = application.degrees.first()
+            if first_degree and first_degree.university:
+                from .models import Certificate
+                try:
+                    # Find the certificate price mapping
+                    cert = Certificate.objects.filter(
+                        college__name__icontains=first_degree.university,
+                        name__icontains=application.requirement
+                    ).first()
+                    if cert and cert.price > 0:
+                        order_amount = float(cert.price)
+                except Exception as e:
+                    print(f"Failed to fetch dynamic price: {e}")
 
         order_request = CreateOrderRequest(
             order_id=order_id,
@@ -1227,8 +1257,7 @@ class CreateCashfreeOrder(APIView):
                 application=application,
                 order_id=order_id,
                 payment_session_id=response.data.payment_session_id,
-                amount=1,
-                currency="INR",
+                amount=order_amount,
                 status="PENDING"
             )
 

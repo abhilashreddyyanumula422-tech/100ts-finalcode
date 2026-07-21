@@ -29,6 +29,10 @@ const StudentRequests = () => {
   const [rejectingStudent, setRejectingStudent] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
+  // --- Approving Pricing Modal State ---
+  const [approvingStudent, setApprovingStudent] = useState(null);
+  const [servicePrice, setServicePrice] = useState("");
+
   // ✅ FETCH API
   useEffect(() => {
     const fetchRequests = async () => {
@@ -45,7 +49,7 @@ const StudentRequests = () => {
     fetchRequests();
   }, []);
 
-  const handleSendEmail = async () => {
+  const handleRequestChanges = async () => {
     if (!replyingTo) return;
 
     try {
@@ -57,10 +61,10 @@ const StudentRequests = () => {
       );
 
       // 2. Also Update Status in DB so student sees it on Waiting Screen
-      await updateStatus(replyingTo.raw_id, "rejected", exactProblem);
+      await updateStatus(replyingTo.raw_id, "changes_requested", exactProblem);
 
       if (response.ok) {
-        alert("✅ Notification sent and Status updated to Rejected");
+        alert("✅ Notification sent and Status updated to Changes Requested");
         setReplyingTo(null);
       } else {
         alert("❌ " + (response.data.error || "Failed to send"));
@@ -71,9 +75,9 @@ const StudentRequests = () => {
     }
   };
 
-  const updateStatus = async (id, newStatus, message = "", agent = null, rejReason = null) => {
+  const updateStatus = async (id, newStatus, message = "", agent = null, rejReason = null, serviceFee = null) => {
     try {
-      const response = await updateApplicationStatus(id, newStatus, message, agent, rejReason);
+      const response = await updateApplicationStatus(id, newStatus, message, agent, rejReason, serviceFee);
 
       if (!response.ok) {
         const errMsg = response.data?.error || "Update failed";
@@ -108,6 +112,17 @@ const StudentRequests = () => {
     await updateStatus(rejectingStudent.raw_id, "rejected", "", null, rejectionReason.trim());
     setRejectingStudent(null);
     setRejectionReason("");
+  };
+
+  // --- Approve Handler ---
+  const handleApproveConfirm = async () => {
+    if (!servicePrice || isNaN(servicePrice) || Number(servicePrice) <= 0) {
+      alert("Please enter a valid total service price.");
+      return;
+    }
+    await updateStatus(approvingStudent.raw_id, "approved", "", null, null, Number(servicePrice));
+    setApprovingStudent(null);
+    setServicePrice("");
   };
   const stages = [
     "pending_approval",
@@ -534,10 +549,13 @@ Please check your email for detailed information or contact us if you have any q
                 {/* Action Buttons */}
                 <div className="pt-6 border-t border-slate-100">
 
-                  {/* Approve + Reject Row */}
+                  {/* Action Buttons Row */}
                   <div className="flex gap-4">
                     <button
-                      onClick={() => updateStatus(selectedStudent.raw_id, "approved")}
+                      onClick={() => {
+                        setApprovingStudent(selectedStudent);
+                        setServicePrice("");
+                      }}
                       disabled={selectedStudent.status === "approved"}
                       className={`flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg transition
         ${selectedStudent.status === "approved"
@@ -564,10 +582,24 @@ Please check your email for detailed information or contact us if you have any q
                       <XCircle size={18} />
                       Reject
                     </button>
+
+                    <button
+                      onClick={() => {
+                        setReplyingTo(selectedStudent);
+                        setIssueType('Document Issue');
+                        setExactProblem('');
+                      }}
+                      disabled={selectedStudent.status === "changes_requested"}
+                      className={`flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition
+        ${selectedStudent.status === "changes_requested"
+                          ? "bg-yellow-200 text-yellow-800 cursor-not-allowed"
+                          : "bg-yellow-50 text-yellow-600 hover:bg-yellow-100 border border-yellow-100"
+                        }`}
+                    >
+                      <AlertCircle size={18} />
+                      Request Changes
+                    </button>
                   </div>
-
-
-
                 </div>
 
               </div>
@@ -709,6 +741,126 @@ Please check your email for detailed information or contact us if you have any q
           </div>
         </div>
       )}
+      
+      {/* --- APPROVING PRICING MODAL --- */}
+      {approvingStudent && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-6 space-y-5">
+              <div className="flex justify-between items-center border-b pb-3">
+                <h2 className="text-xl font-bold text-green-600 flex items-center gap-2">
+                  <CheckCircle size={22} /> Approve Application
+                </h2>
+                <button
+                  onClick={() => { setApprovingStudent(null); setServicePrice(""); }}
+                  className="hover:bg-slate-100 p-1 rounded-full transition"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-600 mb-1">
+                  Approving application for <strong>{approvingStudent.fullName}</strong> ({approvingStudent.id})
+                </p>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Total Service Price (₹) <span className="text-red-500">*</span></label>
+                <input
+                  type="number"
+                  className="w-full border rounded-xl p-3 mt-1 outline-none focus:ring-2 focus:ring-green-400 text-sm"
+                  placeholder="e.g. 500 (Base + Urgency + Travel)"
+                  value={servicePrice}
+                  onChange={(e) => setServicePrice(e.target.value)}
+                />
+                <p className="text-[10px] text-slate-400 mt-1 ml-1">
+                  This amount will be requested from the student for payment.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setApprovingStudent(null); setServicePrice(""); }}
+                  className="flex-1 py-3 rounded-xl font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleApproveConfirm}
+                  disabled={!servicePrice || Number(servicePrice) <= 0}
+                  className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition ${
+                    servicePrice && Number(servicePrice) > 0
+                      ? "bg-green-600 text-white hover:bg-green-700 shadow-lg"
+                      : "bg-green-200 text-green-400 cursor-not-allowed"
+                  }`}
+                >
+                  <CheckCircle size={18} /> Confirm Approval
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- REQUEST CHANGES MODAL --- */}
+      {replyingTo && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-6 space-y-5">
+              <div className="flex justify-between items-center border-b pb-3">
+                <h2 className="text-xl font-bold text-yellow-600 flex items-center gap-2">
+                  <AlertCircle size={22} /> Request Changes
+                </h2>
+                <button
+                  onClick={() => { setReplyingTo(null); setExactProblem(""); }}
+                  className="hover:bg-slate-100 p-1 rounded-full transition"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-600 mb-1">
+                  Requesting changes for <strong>{replyingTo.fullName}</strong> ({replyingTo.id})
+                </p>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Issue Details <span className="text-red-500">*</span></label>
+                <textarea
+                  rows="4"
+                  className="w-full border rounded-xl p-3 mt-1 outline-none focus:ring-2 focus:ring-yellow-400 text-sm"
+                  placeholder="Explain exactly what needs to be fixed..."
+                  value={exactProblem}
+                  onChange={(e) => setExactProblem(e.target.value)}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setReplyingTo(null); setExactProblem(""); }}
+                  className="flex-1 py-3 rounded-xl font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRequestChanges}
+                  disabled={!exactProblem.trim()}
+                  className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition ${
+                    exactProblem.trim()
+                      ? "bg-yellow-500 text-white hover:bg-yellow-600 shadow-lg"
+                      : "bg-yellow-200 text-white cursor-not-allowed"
+                  }`}
+                >
+                  <Send size={18} /> Send Request
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {viewerOpen && selectedStudent?.documentsList?.length > 0 && (
         <div className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col">

@@ -64,6 +64,7 @@ class Application(models.Model):
     phone = models.CharField(max_length=15)
     altPhone = models.CharField(max_length=15)
     payment_status = models.CharField(max_length=20, default="Unpaid")
+    service_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     requirement = models.CharField(max_length=50)
     referenceNumber = models.CharField(max_length=100, blank=True, null=True)
 
@@ -324,6 +325,9 @@ class AgentAssignment(models.Model):
         ('IN_PROGRESS', 'In Progress'),
         ('DOCUMENTS_COLLECTED', 'Documents Collected'),
         ('SUBMITTED_TO_UNIVERSITY', 'Submitted to University'),
+        ('APPROVED', 'Approved by University'),
+        ('REJECTED_BY_UNIVERSITY', 'Rejected by University'),
+        ('ADDITIONAL_DOC_REQUIRED', 'Additional Documents Required'),
         ('COMPLETED', 'Completed'),
         ('REJECTED_BY_AGENT', 'Rejected by Agent'),
         # New Delivery Stages
@@ -356,5 +360,125 @@ class AgentAssignment(models.Model):
     progress_note = models.TextField(null=True, blank=True)
     admin_notified_rejection = models.BooleanField(default=False)
 
+    # ── Phase 6: Logistics & Document ──
+    collected_document_url = models.URLField(null=True, blank=True, help_text="Scanned copy uploaded by agent")
+    courier_partner = models.CharField(
+        max_length=50, null=True, blank=True,
+        choices=[
+            ('Shiprocket', 'Shiprocket'),
+            ('Delhivery', 'Delhivery'),
+            ('BlueDart', 'BlueDart'),
+            ('Other', 'Other'),
+        ]
+    )
+    tracking_id = models.CharField(max_length=100, null=True, blank=True)
+    tracking_url = models.URLField(null=True, blank=True)
+
     def __str__(self):
         return f"Assignment: {self.application} → {self.agent} [{self.status}]"
+
+
+# ─────────────────────────────────────────────────────────────
+# PHASE 6: UNIVERSITY VISIT RECORD
+# ─────────────────────────────────────────────────────────────
+
+class UniversityVisitRecord(models.Model):
+    """Stores the full university visit details recorded by the field agent."""
+    assignment = models.OneToOneField(
+        AgentAssignment,
+        on_delete=models.CASCADE,
+        related_name='visit_record'
+    )
+
+    # Visit Details
+    visit_date = models.DateField(null=True, blank=True)
+    visit_time = models.TimeField(null=True, blank=True)
+    department = models.CharField(max_length=255, blank=True, default='')
+    officer_name = models.CharField(max_length=255, blank=True, default='')
+    university_reference_number = models.CharField(max_length=255, blank=True, default='')
+    remarks = models.TextField(blank=True, default='')
+
+    # University Fees
+    university_fee_paid = models.BooleanField(default=False)
+    university_fee_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+
+    # ── Verification Checklist (7 items) ──
+    chk_verified_student_info = models.BooleanField(default=False)
+    chk_submitted_application = models.BooleanField(default=False)
+    chk_verified_documents = models.BooleanField(default=False)
+    chk_met_officials = models.BooleanField(default=False)
+    chk_submitted_forms = models.BooleanField(default=False)
+    chk_paid_fees = models.BooleanField(default=False)
+    chk_recorded_reference_number = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Visit: {self.assignment} on {self.visit_date}"
+
+
+class UniversityVisitPhoto(models.Model):
+    """Stores optional photos uploaded during a university visit."""
+    visit = models.ForeignKey(
+        UniversityVisitRecord,
+        on_delete=models.CASCADE,
+        related_name='photos'
+    )
+    photo = models.FileField(upload_to='visit_photos/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Photo for visit {self.visit_id}"
+
+
+# ─────────────────────────────────────────────────────────────
+# PHASE 7: UNIVERSITY DECISION RECORD
+# ─────────────────────────────────────────────────────────────
+
+class UniversityDecisionRecord(models.Model):
+    DECISION_CHOICES = [
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+        ('ADDITIONAL_DOCS', 'Additional Documents Required'),
+    ]
+
+    REJECTION_REASONS = [
+        ('Student Record Not Found', 'Student Record Not Found'),
+        ('Incomplete Documents', 'Incomplete Documents'),
+        ('Name Mismatch', 'Name Mismatch'),
+        ('Pending University Fees', 'Pending University Fees'),
+        ('Authorization Letter Missing', 'Authorization Letter Missing'),
+        ('Duplicate Request', 'Duplicate Request'),
+        ('University Policy Restriction', 'University Policy Restriction'),
+        ('Other', 'Other'),
+    ]
+
+    assignment = models.OneToOneField(
+        AgentAssignment,
+        on_delete=models.CASCADE,
+        related_name='decision_record'
+    )
+    decision = models.CharField(max_length=20, choices=DECISION_CHOICES)
+    officer_name = models.CharField(max_length=255, blank=True, default='')
+    remarks = models.TextField(blank=True, default='')
+
+    # If REJECTED
+    rejection_reason = models.CharField(max_length=100, choices=REJECTION_REASONS, null=True, blank=True)
+    rejection_letter = models.FileField(upload_to='rejection_letters/', null=True, blank=True)
+
+    # If ADDITIONAL_DOCS
+    required_documents = models.TextField(null=True, blank=True)
+    deadline = models.DateField(null=True, blank=True)
+
+    # If APPROVED
+    university_reference_number = models.CharField(max_length=255, null=True, blank=True)
+    acceptance_date = models.DateField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Decision: {self.decision} for {self.assignment}"

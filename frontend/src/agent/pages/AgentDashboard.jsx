@@ -12,8 +12,15 @@ const STATUS_CONFIG = {
   IN_PROGRESS: { label: "In Progress", color: "bg-indigo-100 text-indigo-700", icon: <Loader2 size={14} /> },
   DOCUMENTS_COLLECTED: { label: "Docs Collected", color: "bg-cyan-100 text-cyan-700", icon: <FileSearch size={14} /> },
   SUBMITTED_TO_UNIVERSITY: { label: "At University", color: "bg-purple-100 text-purple-700", icon: <Building2 size={14} /> },
+  APPROVED: { label: "Univ. Approved", color: "bg-emerald-100 text-emerald-700", icon: <CheckCircle2 size={14} /> },
+  REJECTED_BY_UNIVERSITY: { label: "Univ. Rejected", color: "bg-red-100 text-red-700", icon: <XCircle size={14} /> },
+  ADDITIONAL_DOC_REQUIRED: { label: "Docs Needed", color: "bg-orange-100 text-orange-700", icon: <AlertTriangle size={14} /> },
   COMPLETED: { label: "Completed", color: "bg-green-100 text-green-700", icon: <CheckCircle2 size={14} /> },
   REJECTED_BY_AGENT: { label: "Rejected", color: "bg-red-100 text-red-700", icon: <XCircle size={14} /> },
+  DELIVERY_ASSIGNED: { label: "Delivery Assigned", color: "bg-teal-100 text-teal-700", icon: <CheckCircle2 size={14} /> },
+  PICKED_UP: { label: "Picked Up", color: "bg-blue-100 text-blue-700", icon: <CheckCircle2 size={14} /> },
+  OUT_FOR_DELIVERY: { label: "Out for Delivery", color: "bg-yellow-100 text-yellow-700", icon: <CheckCircle2 size={14} /> },
+  DELIVERED: { label: "Delivered", color: "bg-green-100 text-green-700", icon: <CheckCircle2 size={14} /> },
 };
 
 export default function AgentDashboard() {
@@ -51,6 +58,25 @@ export default function AgentDashboard() {
   const pending = assignments.filter((a) => a.status === "ASSIGNED_TO_AGENT").length;
   const active = assignments.filter((a) => !["COMPLETED", "REJECTED_BY_AGENT", "ASSIGNED_TO_AGENT"].includes(a.status)).length;
   const completed = assignments.filter((a) => a.status === "COMPLETED").length;
+  const rejected = assignments.filter((a) => a.status === "REJECTED_BY_AGENT").length;
+  const visits = assignments.filter((a) => ["DOCUMENTS_COLLECTED", "SUBMITTED_TO_UNIVERSITY"].includes(a.status)).length;
+
+  // Generate dynamic notifications
+  const notifications = [];
+  assignments.forEach(a => {
+    if (a.status === "ASSIGNED_TO_AGENT") {
+      notifications.push({ id: `notif-${a.id}-assigned`, msg: `New assignment waiting: ${a.application_display_id}`, date: new Date(a.assigned_at || Date.now()), type: 'new' });
+    }
+    if (a.status === "REJECTED_BY_AGENT") {
+      notifications.push({ id: `notif-${a.id}-rejected`, msg: `You rejected assignment ${a.application_display_id}`, date: new Date(a.completed_at || Date.now()), type: 'rejected' });
+    }
+    if (a.status === "ACCEPTED") {
+      notifications.push({ id: `notif-${a.id}-accepted`, msg: `You accepted ${a.application_display_id}. Please start progress.`, date: new Date(a.accepted_at || Date.now()), type: 'info' });
+    }
+  });
+  // Sort latest first and take top 4
+  notifications.sort((a, b) => b.date - a.date);
+  const topNotifications = notifications.slice(0, 4);
 
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto">
@@ -63,7 +89,7 @@ export default function AgentDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-yellow-50 border border-yellow-100 rounded-2xl p-4 text-center">
           <p className="text-3xl font-bold text-yellow-600">{pending}</p>
           <p className="text-xs text-yellow-500 font-semibold mt-1">Pending Acceptance</p>
@@ -72,10 +98,43 @@ export default function AgentDashboard() {
           <p className="text-3xl font-bold text-blue-600">{active}</p>
           <p className="text-xs text-blue-500 font-semibold mt-1">In Progress</p>
         </div>
+        <div className="bg-purple-50 border border-purple-100 rounded-2xl p-4 text-center">
+          <p className="text-3xl font-bold text-purple-600">{visits}</p>
+          <p className="text-xs text-purple-500 font-semibold mt-1">Today's Visits</p>
+        </div>
         <div className="bg-green-50 border border-green-100 rounded-2xl p-4 text-center">
           <p className="text-3xl font-bold text-green-600">{completed}</p>
           <p className="text-xs text-green-500 font-semibold mt-1">Completed</p>
         </div>
+        <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-center">
+          <p className="text-3xl font-bold text-red-600">{rejected}</p>
+          <p className="text-xs text-red-500 font-semibold mt-1">Rejected</p>
+        </div>
+      </div>
+
+      {/* Notifications Block */}
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+        <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+          <Clock size={16} className="text-slate-500" /> Recent Activity & Notifications
+        </h3>
+        {topNotifications.length > 0 ? (
+          <div className="space-y-2">
+            {topNotifications.map(n => (
+              <div key={n.id} className="text-sm flex items-start gap-2 bg-white p-2.5 rounded-xl border border-slate-100 shadow-sm">
+                <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                  n.type === 'new' ? 'bg-blue-500 animate-pulse' :
+                  n.type === 'rejected' ? 'bg-red-500' : 'bg-indigo-500'
+                }`}></span>
+                <div className="flex-1">
+                  <p className="text-slate-700">{n.msg}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{n.date.toLocaleString()}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">No recent activity.</p>
+        )}
       </div>
 
       {/* Alert for pending */}

@@ -178,12 +178,13 @@ export const sendNotification = async (email, subject, message) => {
   return apiPost("/api/send-notification/", { email, subject, message });
 };
 
-export const updateApplicationStatus = async (id, status, adminMessage, agent, rejectionReason) => {
+export const updateApplicationStatus = async (id, status, adminMessage, agent, rejectionReason, serviceFee) => {
   return apiPost(`/api/application/${id}/update-status/`, {
     status,
     admin_message: adminMessage,
     agent,
-    rejection_reason: rejectionReason || null
+    rejection_reason: rejectionReason || null,
+    service_fee: serviceFee || null
   });
 };
 
@@ -304,6 +305,40 @@ export const rejectAssignment = (agentId, assignmentId, reason) =>
 export const updateAssignmentStatus = (agentId, assignmentId, status, note) =>
   apiPost(`/api/agent/${agentId}/assignments/${assignmentId}/update-status/`, { status, note });
 
+export const uploadCollectedDocument = (agentId, assignmentId, file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return fetch(`${API_BASE_URL}/api/agent/${agentId}/assignments/${assignmentId}/upload-document/`, {
+    method: "POST",
+    body: formData,
+  }).then(async (res) => ({ ok: res.ok, data: await res.json(), status: res.status }));
+};
+
+export const addLogistics = (agentId, assignmentId, courier_partner, tracking_id) =>
+  apiPost(`/api/agent/${agentId}/assignments/${assignmentId}/add-logistics/`, { courier_partner, tracking_id });
+
+export const saveVisitDetails = (agentId, assignmentId, data) =>
+  apiPost(`/api/agent/${agentId}/assignments/${assignmentId}/visit/`, data);
+
+export const getVisitDetails = (agentId, assignmentId) =>
+  apiGet(`/api/agent/${agentId}/assignments/${assignmentId}/visit/get/`);
+
+export const uploadVisitPhoto = (agentId, assignmentId, photoFile) => {
+  const formData = new FormData();
+  formData.append("photo", photoFile);
+  return fetch(`${API_BASE_URL}/api/agent/${agentId}/assignments/${assignmentId}/visit/photos/`, {
+    method: "POST",
+    body: formData,
+  }).then(async (res) => ({ ok: res.ok, data: await res.json(), status: res.status }));
+};
+
+export const submitUniversityDecision = (agentId, assignmentId, formData) => {
+  return fetch(`${API_BASE_URL}/api/agent/${agentId}/assignments/${assignmentId}/decision/`, {
+    method: "POST",
+    body: formData,
+  }).then(async (res) => ({ ok: res.ok, data: await res.json(), status: res.status }));
+};
+
 // ===============================
 // Export Base URL for direct use
 // ===============================
@@ -357,4 +392,10 @@ export default {
   acceptAssignment,
   rejectAssignment,
   updateAssignmentStatus,
+  uploadCollectedDocument,
+  addLogistics,
+  saveVisitDetails,
+  getVisitDetails,
+  uploadVisitPhoto,
+  submitUniversityDecision,
 };

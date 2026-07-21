@@ -1557,7 +1557,7 @@ const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, 
   );
 };
 
-const Step1 = ({ form: _form, goStep, handlePayment }) => (
+const Step1 = ({ form: _form, goStep, handlePayment, serviceFee }) => (
   <div>
     <div className="step-header">
       <div className="step-icon icon-amber">💳</div>
@@ -1569,7 +1569,7 @@ const Step1 = ({ form: _form, goStep, handlePayment }) => (
     <div className="info-panel amber">
       <span className="info-icon">🔒</span>
       <h3>Service Fee</h3>
-      <div className="amount">₹ 20</div>
+      <div className="amount">₹ {serviceFee}</div>
       <p>One-time fee for verification, attestation &amp; processing.<br />100% Secure &bull; Instant confirmation</p>
     </div>
     <div className="timeline">
@@ -1579,7 +1579,7 @@ const Step1 = ({ form: _form, goStep, handlePayment }) => (
     </div>
     <div className="actions">
       <button className="btn-secondary" onClick={() => goStep(0)}>← Back</button>
-      <button className="btn-primary sky" onClick={handlePayment}>💳 &nbsp;Pay ₹1 Now</button>
+      <button className="btn-primary sky" onClick={handlePayment}>💳 &nbsp;Pay ₹{serviceFee} Now</button>
     </div>
   </div>
 );
@@ -1590,22 +1590,25 @@ const Step2 = ({ appStatus, adminMessage, rejectionReason, goStep, onRetry }) =>
   const isWaiting = isPendingApproval || isPending;
   const isApproved = appStatus === "approved";
   const isRejected = appStatus === "rejected";
+  const isChangesRequested = appStatus === "changes_requested";
 
   return (
     <div>
       <div className="step-header">
-        <div className={`step-icon ${isRejected ? "icon-amber" : isApproved ? "icon-sky" : "icon-blue"}`}>
-          {isRejected ? "❌" : isApproved ? "✅" : "⏳"}
+        <div className={`step-icon ${isRejected ? "icon-amber" : isApproved ? "icon-sky" : isChangesRequested ? "icon-amber" : "icon-blue"}`}>
+          {isRejected ? "❌" : isApproved ? "✅" : isChangesRequested ? "⚠️" : "⏳"}
         </div>
         <div>
           <div className="step-title">
-            {isRejected ? "Application Rejected" : isApproved ? "Documents Verified" : "Waiting for Admin Approval"}
+            {isRejected ? "Application Rejected" : isApproved ? "Documents Verified" : isChangesRequested ? "Changes Requested" : "Waiting for Admin Approval"}
           </div>
           <div className="step-subtitle">
             {isRejected
               ? "Your application was rejected by the admin"
               : isApproved
               ? "Your documents have been approved! Please proceed to payment"
+              : isChangesRequested
+              ? "The admin has requested some changes to your application"
               : "Your application has been submitted and is pending admin review"}
           </div>
         </div>
@@ -1639,23 +1642,35 @@ const Step2 = ({ appStatus, adminMessage, rejectionReason, goStep, onRetry }) =>
         </div>
       )}
 
+      {isChangesRequested && (
+        <div className="info-panel amber">
+          <span className="info-icon">⚠️</span>
+          <h3>Changes Requested</h3>
+          <div style={{ background: "rgba(255,255,255,0.6)", padding: "12px", borderRadius: "10px", margin: "10px 0", border: "1px solid #fde68a" }}>
+            <p style={{ fontWeight: 700, color: "#92400e", marginBottom: 4 }}>Admin Message:</p>
+            <p style={{ color: "#b45309", fontSize: "14px" }}>{adminMessage || "Please review your documents and update them."}</p>
+          </div>
+          <p>Please update your application and resubmit.</p>
+        </div>
+      )}
+
       <div className="timeline">
         <TlItem icon="✅" bg="#e0f2fe" title="Documents Submitted" desc="All documents received." badge="bdone" />
         <TlItem
-          icon={isApproved ? "✅" : isRejected ? "❌" : "⏳"}
-          bg={isApproved ? "#e0f2fe" : isRejected ? "#fee2e2" : "#dbeafe"}
+          icon={isApproved ? "✅" : isRejected ? "❌" : isChangesRequested ? "⚠️" : "⏳"}
+          bg={isApproved ? "#e0f2fe" : (isRejected || isChangesRequested) ? "#fee2e2" : "#dbeafe"}
           title="Admin Approval"
-          desc={isRejected ? "Application was rejected." : isApproved ? "Admin approved!" : "Waiting for admin review."}
-          badge={isApproved ? "bdone" : isRejected ? "bwait" : "bprog"}
+          desc={isRejected ? "Application was rejected." : isChangesRequested ? "Changes requested by admin." : isApproved ? "Admin approved!" : "Waiting for admin review."}
+          badge={isApproved ? "bdone" : (isRejected || isChangesRequested) ? "bwait" : "bprog"}
         />
         <TlItem icon="💳" bg="#f1f5f9" title="Secure Payment" desc="Proceed to payment after approval." badge={isApproved ? "bprog" : "bwait"} />
         <TlItem icon="🏛️" bg="#f1f5f9" title="University Verification" desc="Sent to university after payment." badge="bwait" last />
       </div>
 
       <div className="actions">
-        {isRejected && (
+        {(isRejected || isChangesRequested) && (
           <button className="btn-primary" onClick={onRetry}>
-            🔄 &nbsp;Submit New Application
+            🔄 &nbsp;{isChangesRequested ? "Update Application" : "Submit New Application"}
           </button>
         )}
         {isApproved && (
@@ -1928,6 +1943,7 @@ export default function Apply() {
   const [appStatus, setAppStatus] = useState("pending_approval");
   const [adminMessage, setAdminMessage] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
+  const [serviceFee, setServiceFee] = useState(20);
   const [errors, setErrors] = useState({});
 
   const [form, setForm] = useState(() => {
@@ -2013,6 +2029,9 @@ export default function Apply() {
             setAppStatus(data.status);
             setAdminMessage(data.admin_message || "");
             setRejectionReason(data.rejection_reason || "");
+            if (data.service_fee) {
+              setServiceFee(data.service_fee);
+            }
             if (data.application_id) {
               setApplicationId(data.application_id);
               localStorage.setItem("applicationId", data.application_id);
@@ -2028,8 +2047,8 @@ export default function Apply() {
               else goStep(2);
             } else if (data.status === "pending_approval" || data.status === "pending") {
               goStep(1);
-            } else if (data.status === "rejected") {
-              goStep(1); // Stay on waiting screen to show rejection reason
+            } else if (data.status === "rejected" || data.status === "changes_requested") {
+              goStep(1); // Stay on waiting screen to show message
             } else if (data.status === "delivered") {
               goStep(4);
             }
@@ -2054,8 +2073,13 @@ export default function Apply() {
             setAppStatus(data.status);
             setAdminMessage(data.admin_message || "");
             setRejectionReason(data.rejection_reason || "");
+            if (data.service_fee) {
+              setServiceFee(data.service_fee);
+            }
             if (data.status === "approved") {
               // keep step 1, but Step2 will show proceed to payment
+            } else if (data.status === "rejected" || data.status === "changes_requested") {
+              // keep step 1, Step2 will show rejection or changes requested message
             } else if (data.status === "delivered") {
               goStep(4);
             }
@@ -2383,6 +2407,7 @@ export default function Apply() {
                     form={form}
                     goStep={() => goStep(1)}
                     handlePayment={handlePayment}
+                    serviceFee={serviceFee}
                   />
                 )}
                 {activeStep === 3 && <Step3 reset={reset} handleRefund={handleRefund} />}

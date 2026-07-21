@@ -110,4 +110,12 @@ urlpatterns = [
     path("agent/<int:agent_id>/assignments/<int:assignment_id>/accept/", views_agent.agent_accept_assignment, name="agent-accept"),
     path("agent/<int:agent_id>/assignments/<int:assignment_id>/reject/", views_agent.agent_reject_assignment, name="agent-reject"),
     path("agent/<int:agent_id>/assignments/<int:assignment_id>/update-status/", views_agent.agent_update_status, name="agent-update-status"),
+    path("agent/<int:agent_id>/assignments/<int:assignment_id>/upload-document/", views_agent.agent_upload_document, name="agent-upload-document"),
+    path("agent/<int:agent_id>/assignments/<int:assignment_id>/add-logistics/", views_agent.agent_add_logistics, name="agent-add-logistics"),
+    # Phase 6: University Visit
+    path("agent/<int:agent_id>/assignments/<int:assignment_id>/visit/", views_agent.agent_save_visit_details, name="agent-save-visit"),
+    path("agent/<int:agent_id>/assignments/<int:assignment_id>/visit/get/", views_agent.agent_get_visit_details, name="agent-get-visit"),
+    path("agent/<int:agent_id>/assignments/<int:assignment_id>/visit/photos/", views_agent.agent_upload_visit_photo, name="agent-upload-visit-photo"),
+    # Phase 7: University Decision
+    path("agent/<int:agent_id>/assignments/<int:assignment_id>/decision/", views_agent.agent_submit_university_decision, name="agent-submit-decision"),
 ]
