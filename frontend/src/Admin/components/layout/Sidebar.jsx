@@ -8,10 +8,12 @@ import {
   Truck,
   Settings,
   LogOut,
-  MailWarning, // Added for Email Template
-  Building2,   // Added for College Requests
-  GraduationCap, // Added for Universities
+  MailWarning,
+  Building2,
+  GraduationCap,
   X,
+  UserCog,
+  Activity,
 } from "lucide-react";
 
 const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
@@ -32,12 +34,8 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
     { name: "College Verification", path: "/admin/college-verification", icon: <ShieldCheck size={20} /> },
     { name: "Delivery", path: "/admin/delivery", icon: <Truck size={20} /> },
     { name: "College Requests", path: "/admin/college-requests", icon: <Building2 size={20} /> },
-
-    // { 
-    //   name: "Email Notification", 
-    //   path: "/admin/email-notification-template",
-    //   icon: <MailWarning size={20} /> 
-    // },
+    { name: "Agent Management", path: "/admin/agents", icon: <UserCog size={20} /> },
+    { name: "Agent Tracking", path: "/admin/agent-tracking", icon: <Activity size={20} /> },
   ];
   // 🔸 PARTNER MENU
   const partnerItems = [

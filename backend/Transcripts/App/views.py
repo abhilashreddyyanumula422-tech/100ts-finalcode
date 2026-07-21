@@ -508,6 +508,54 @@ def get_applications(request):
         university = first_degree.university if first_degree else "N/A"
         app_type = app.requirement
 
+        # Build Tracking Timeline
+        stages = [
+            "Request Submitted",
+            "Request Verified",
+            "Documents Under Processing",
+            "Documents Ready",
+            "Delivery Agent Assigned",
+            "Picked Up by Delivery Agent",
+            "Out for Delivery",
+            "Delivered Successfully"
+        ]
+        
+        # Determine current stage index based on app.status and agent assignment
+        current_stage_idx = 0
+        if app.status in ['approved', 'completed']:
+            current_stage_idx = max(current_stage_idx, 1)
+        
+        agent_assignment = getattr(app, 'agent_assignment', None)
+        if agent_assignment:
+            # Map assignment status to stage
+            agent_status_map = {
+                'IN_PROGRESS': 2,
+                'DOCUMENTS_COLLECTED': 3,
+                'DELIVERY_ASSIGNED': 4,
+                'PICKED_UP': 5,
+                'OUT_FOR_DELIVERY': 6,
+                'DELIVERED': 7,
+                'COMPLETED': 7,
+            }
+            if agent_assignment.status in agent_status_map:
+                current_stage_idx = max(current_stage_idx, agent_status_map[agent_assignment.status])
+            else:
+                current_stage_idx = max(current_stage_idx, 2) # assigned but not picked up yet
+
+        tracking_history = []
+        for idx, stage_name in enumerate(stages):
+            if idx < current_stage_idx:
+                status_val = "completed"
+            elif idx == current_stage_idx:
+                status_val = "current"
+            else:
+                status_val = "upcoming"
+            tracking_history.append({
+                "step": stage_name,
+                "status": status_val,
+                "time": app.created_at.strftime("%b %d, %Y, %I:%M %p") if idx == 0 else "" # Optionally fetch real timestamps from TrackingHistory model
+            })
+
         data.append({
             "id": f"REQ-{app.id:03}",
             "raw_id": app.id,
@@ -518,12 +566,15 @@ def get_applications(request):
             "type": app_type,
             "payment": app.payment_status,
             "status": app.status,
-            "agent": app.agent or "Unassigned",
+            "agent": agent_assignment.agent.name if agent_assignment and agent_assignment.agent else "Unassigned",
+            "assigned": agent_assignment.agent.name if agent_assignment and agent_assignment.agent else "Unassigned",
+            "delivery": "Standard Courier",
             "district": getattr(app, 'district', 'N/A'), # if added
             "documentsList": [
                 {"id": doc.id, "name": doc.name, "status": "Verified", "url": request.build_absolute_uri(doc.file.url)}
                 for doc in app.documents.all()
-            ]
+            ],
+            "trackingHistory": tracking_history
         })
     return Response(data)
 
@@ -598,6 +649,10 @@ def update_status(request, id=None):
         # Validate: rejection reason is mandatory when rejecting
         if status == "rejected" and not (rejection_reason or "").strip():
             return JsonResponse({"error": "Rejection reason is required when rejecting an application."}, status=400)
+        
+        # Validate: admin message is mandatory for changes_requested
+        if status == "changes_requested" and not (admin_message or "").strip():
+            return JsonResponse({"error": "Admin message is required when requesting changes."}, status=400)
 
         try:
             if id:
@@ -1141,9 +1196,25 @@ class CreateCashfreeOrder(APIView):
             customer_phone=phone
         )
 
+        # DYNAMIC PRICING CALCULATION
+        order_amount = 1.00 # Fallback default
+        first_degree = application.degrees.first()
+        if first_degree and first_degree.university:
+            from .models import Certificate
+            try:
+                # Find the certificate price mapping
+                cert = Certificate.objects.filter(
+                    college__name__icontains=first_degree.university,
+                    name__icontains=application.requirement
+                ).first()
+                if cert and cert.price > 0:
+                    order_amount = float(cert.price)
+            except Exception as e:
+                print(f"Failed to fetch dynamic price: {e}")
+
         order_request = CreateOrderRequest(
             order_id=order_id,
-            order_amount=1.00,
+            order_amount=order_amount,
             order_currency="INR",
             customer_details=customer_details
         )
@@ -1412,3 +1483,42 @@ def get_dashboard_stats(request):
         return Response(data, status=200)
     except Exception as e:
         return Response({"error": str(e)}, status=500)
+
+from django.http import HttpResponse
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+
+@api_view(['GET'])
+def download_invoice(request, application_id):
+    try:
+        application = Application.objects.get(id=application_id)
+        payment = Payment.objects.filter(application=application, status='PAID').last()
+        
+        if not payment:
+            return Response({"error": "No successful payment found for this application."}, status=status.HTTP_404_NOT_FOUND)
+
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="Invoice_{application.application_id}.pdf"'
+
+        p = canvas.Canvas(response, pagesize=letter)
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(100, 750, "100 Transcripts - Invoice")
+        
+        p.setFont("Helvetica", 12)
+        p.drawString(100, 720, f"Application ID: {application.application_id}")
+        p.drawString(100, 700, f"Name: {application.fullName}")
+        p.drawString(100, 680, f"Email: {application.email}")
+        p.drawString(100, 660, f"Requirement: {application.requirement}")
+        
+        p.drawString(100, 620, f"Order ID: {payment.order_id}")
+        p.drawString(100, 600, f"Amount Paid: {payment.currency} {payment.amount}")
+        p.drawString(100, 580, f"Payment Status: {payment.status}")
+        p.drawString(100, 560, f"Date: {payment.updated_at.strftime('%Y-%m-%d %H:%M:%S')}")
+
+        p.showPage()
+        p.save()
+        return response
+
+    except Application.DoesNotExist:
+        return Response({"error": "Application not found"}, status=status.HTTP_404_NOT_FOUND)
+

@@ -1,5 +1,6 @@
 import React, { lazy, Suspense } from "react";
 import AdminProtectedRoute from "./AdminProtectedRoute";
+import AgentProtectedRoute from "./AgentProtectedRoute";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ScrollToTop from "../components/ScrollToTop";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -48,6 +49,14 @@ const Settings = lazy(() => import("../Admin/pages/Settings"));
 const CollegeRequests = lazy(() => import("../Admin/pages/CollegeRequests"));
 const EmailNotificationTemplate = lazy(() => import("../Admin/pages/EmailNotificationTemplate"));
 const AdminUniversities = lazy(() => import("../Admin/pages/adminUniversities"));
+const AgentsManagement = lazy(() => import("../Admin/pages/AgentsManagement"));
+const AdminAgentTracking = lazy(() => import("../Admin/pages/AdminAgentTracking"));
+
+/* ================= AGENT ================= */
+import AgentLayout from "../agent/layout/AgentLayout";
+const AgentLogin = lazy(() => import("../agent/pages/AgentLogin"));
+const AgentDashboard = lazy(() => import("../agent/pages/AgentDashboard"));
+const AgentRequestDetail = lazy(() => import("../agent/pages/AgentRequestDetail"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -112,6 +121,18 @@ const AppRoutes = () => {
             <Route path="delivery" element={<DeliveryManagement />} />
             <Route path="email-notification-template" element={<EmailNotificationTemplate />} />
             <Route path="settings" element={<Settings />} />
+            {/* Agent Module */}
+            <Route path="agents" element={<AgentsManagement />} />
+            <Route path="agent-tracking" element={<AdminAgentTracking />} />
+          </Route>
+        </Route>
+
+        {/* ================= AGENT ROUTES ================= */}
+        <Route path="/agent/login" element={<AgentLogin />} />
+        <Route path="/agent" element={<AgentProtectedRoute />}>
+          <Route element={<AgentLayout />}>
+            <Route path="dashboard" element={<AgentDashboard />} />
+            <Route path="requests/:id" element={<AgentRequestDetail />} />
           </Route>
         </Route>
 

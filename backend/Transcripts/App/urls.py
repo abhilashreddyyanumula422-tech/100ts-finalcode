@@ -14,6 +14,7 @@ from .views import (
     RefundPayment,
     get_dashboard_stats
 )
+from . import views_agent
 
 urlpatterns = [
     # path('upload/', upload_image),
@@ -57,30 +58,56 @@ urlpatterns = [
     "create-order/<int:application_id>/",
     CreateCashfreeOrder.as_view(),
     name="create-order"
-),
+    ),
+    path(
+        "verify-payment/<str:order_id>/",
+        VerifyPayment.as_view(),
+        name="verify-payment"
+    ),
+    path(
+        "payment/<int:application_id>/",
+        PaymentDetail.as_view(),
+        name="payment-detail"
+    ),
+    path(
+        "webhook/",
+        cashfree_webhook,
+        name="cashfree-webhook"
+    ),
+    path(
+        "refund/",
+        RefundPayment.as_view(),
+        name="refund-payment"
+    ),
+    path(
+        "payment/<int:application_id>/invoice/",
+        views.download_invoice,
+        name="download-invoice"
+    ),
 
-   path(
-    "verify-payment/<str:order_id>/",
-    VerifyPayment.as_view(),
-    name="verify-payment"
-),
+    # ─────────────────────────────────────────────────────
+    # AGENT PROCESSING MODULE — NEW URLS (existing untouched)
+    # ─────────────────────────────────────────────────────
 
-   path(
-    "payment/<int:application_id>/",
-    PaymentDetail.as_view(),
-    name="payment-detail"
-),
+    # Agent Auth
+    path("agent/login/", views_agent.agent_login, name="agent-login"),
 
-   path(
-    "webhook/",
-    cashfree_webhook,
-    name="cashfree-webhook"
-),
-   path(
-    "refund/",
-    RefundPayment.as_view(),
-    name="refund-payment"
-),
-    
+    # Admin — Agent CRUD
+    path("admin/agents/", views_agent.admin_agents_list, name="admin-agents-list"),
+    path("admin/agents/<int:agent_id>/", views_agent.admin_agent_detail, name="admin-agent-detail"),
+    path("admin/agents/<int:agent_id>/toggle/", views_agent.admin_agent_toggle, name="admin-agent-toggle"),
 
+    # Admin — Assignment
+    path("admin/applications/<int:app_id>/eligible-agents/", views_agent.admin_eligible_agents, name="admin-eligible-agents"),
+    path("admin/applications/<int:app_id>/assign-agent/", views_agent.admin_assign_agent, name="admin-assign-agent"),
+    path("admin/applications/<int:app_id>/auto-assign/", views_agent.admin_auto_assign, name="admin-auto-assign"),
+    path("admin/applications/<int:app_id>/assignment/", views_agent.admin_application_assignment, name="admin-app-assignment"),
+    path("admin/agent-assignments/", views_agent.admin_all_assignments, name="admin-all-assignments"),
+
+    # Agent — Their Assignments
+    path("agent/<int:agent_id>/assignments/", views_agent.agent_my_assignments, name="agent-my-assignments"),
+    path("agent/<int:agent_id>/assignments/<int:assignment_id>/", views_agent.agent_assignment_detail, name="agent-assignment-detail"),
+    path("agent/<int:agent_id>/assignments/<int:assignment_id>/accept/", views_agent.agent_accept_assignment, name="agent-accept"),
+    path("agent/<int:agent_id>/assignments/<int:assignment_id>/reject/", views_agent.agent_reject_assignment, name="agent-reject"),
+    path("agent/<int:agent_id>/assignments/<int:assignment_id>/update-status/", views_agent.agent_update_status, name="agent-update-status"),
 ]

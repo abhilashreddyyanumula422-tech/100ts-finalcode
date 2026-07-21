@@ -56,6 +56,7 @@ class Application(models.Model):
         ('pending', 'Pending'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
+        ('changes_requested', 'Changes Requested'),
         ('completed', 'Completed'),
     ]
     fullName = models.CharField(max_length=255)
@@ -130,6 +131,15 @@ class Application(models.Model):
                     phone_number=self.phone,
                     template_name="request_rejected",
                     variables=[self.fullName, self.application_id, self.rejection_reason or ""],
+                    application_id=self.application_id,
+                    customer_name=self.fullName,
+                    status=new_status
+                )
+            elif new_status == "changes_requested":
+                send_interakt_template(
+                    phone_number=self.phone,
+                    template_name="request_rejected", # Reusing rejection template or similar since no specific template exists, or fallback
+                    variables=[self.fullName, self.application_id, getattr(self, 'admin_message', "Please review your application and update the necessary details.")],
                     application_id=self.application_id,
                     customer_name=self.fullName,
                     status=new_status
@@ -266,3 +276,85 @@ class DeliveryRequest(models.Model):
         return self.tracking_id
 
 
+# ─────────────────────────────────────────────────────────────
+# AGENT PROCESSING MODULE
+# ─────────────────────────────────────────────────────────────
+
+class Agent(models.Model):
+    """Field agent who processes certificate applications on-ground."""
+    name = models.CharField(max_length=255)
+    employee_id = models.CharField(max_length=100, unique=True)
+    mobile = models.CharField(max_length=15)
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=255)
+    is_active = models.BooleanField(default=True)
+    location = models.CharField(max_length=255, blank=True, default='')
+    experience = models.PositiveIntegerField(default=0, help_text='Years of experience')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def current_workload(self):
+        """Count of active (non-completed, non-rejected) assignments."""
+        return self.assignments.exclude(
+            status__in=['COMPLETED', 'REJECTED_BY_AGENT']
+        ).count()
+
+    def __str__(self):
+        return f"{self.name} ({self.employee_id})"
+
+
+class TrackingHistory(models.Model):
+    application = models.ForeignKey(
+        Application,
+        on_delete=models.CASCADE,
+        related_name='tracking_history'
+    )
+    status = models.CharField(max_length=50)
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.application.application_id} - {self.status}"
+
+class AgentAssignment(models.Model):
+    """Tracks an agent's assignment and progress on a single application."""
+    AGENT_STATUS_CHOICES = [
+        ('ASSIGNED_TO_AGENT', 'Assigned to Agent'),
+        ('ACCEPTED', 'Accepted by Agent'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('DOCUMENTS_COLLECTED', 'Documents Collected'),
+        ('SUBMITTED_TO_UNIVERSITY', 'Submitted to University'),
+        ('COMPLETED', 'Completed'),
+        ('REJECTED_BY_AGENT', 'Rejected by Agent'),
+        # New Delivery Stages
+        ('DELIVERY_ASSIGNED', 'Delivery Agent Assigned'),
+        ('PICKED_UP', 'Picked Up by Delivery Agent'),
+        ('OUT_FOR_DELIVERY', 'Out for Delivery'),
+        ('DELIVERED', 'Delivered Successfully'),
+    ]
+
+    application = models.OneToOneField(
+        Application,
+        on_delete=models.CASCADE,
+        related_name='agent_assignment'
+    )
+    agent = models.ForeignKey(
+        Agent,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='assignments'
+    )
+    status = models.CharField(
+        max_length=30,
+        choices=AGENT_STATUS_CHOICES,
+        default='ASSIGNED_TO_AGENT'
+    )
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    agent_rejection_reason = models.TextField(null=True, blank=True)
+    progress_note = models.TextField(null=True, blank=True)
+    admin_notified_rejection = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Assignment: {self.application} → {self.agent} [{self.status}]"

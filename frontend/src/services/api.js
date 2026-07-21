@@ -268,6 +268,43 @@ export const submitContact = (contactData) => {
 };
 
 // ===============================
+// AGENT PROCESSING MODULE APIs
+// ===============================
+
+export const agentLogin = (email, password) =>
+  apiPost("/api/agent/login/", { email, password });
+
+// Admin — Agent CRUD
+export const getAgents = () => apiGet("/api/admin/agents/");
+export const createAgent = (data) => apiPost("/api/admin/agents/", data);
+export const updateAgent = (id, data) => apiPut(`/api/admin/agents/${id}/`, data);
+export const deleteAgent = (id) => apiDelete(`/api/admin/agents/${id}/`);
+export const toggleAgent = (id) => apiPost(`/api/admin/agents/${id}/toggle/`, {});
+
+// Admin — Assignment
+export const getEligibleAgents = (appId) =>
+  apiGet(`/api/admin/applications/${appId}/eligible-agents/`);
+export const assignAgent = (appId, agentId) =>
+  apiPost(`/api/admin/applications/${appId}/assign-agent/`, { agent_id: agentId });
+export const autoAssignAgent = (appId) =>
+  apiPost(`/api/admin/applications/${appId}/auto-assign/`, {});
+export const getApplicationAssignment = (appId) =>
+  apiGet(`/api/admin/applications/${appId}/assignment/`);
+export const getAllAssignments = () => apiGet("/api/admin/agent-assignments/");
+
+// Agent — Their Assignments
+export const getMyAssignments = (agentId) =>
+  apiGet(`/api/agent/${agentId}/assignments/`);
+export const getAssignmentDetail = (agentId, assignmentId) =>
+  apiGet(`/api/agent/${agentId}/assignments/${assignmentId}/`);
+export const acceptAssignment = (agentId, assignmentId) =>
+  apiPost(`/api/agent/${agentId}/assignments/${assignmentId}/accept/`, {});
+export const rejectAssignment = (agentId, assignmentId, reason) =>
+  apiPost(`/api/agent/${agentId}/assignments/${assignmentId}/reject/`, { reason });
+export const updateAssignmentStatus = (agentId, assignmentId, status, note) =>
+  apiPost(`/api/agent/${agentId}/assignments/${assignmentId}/update-status/`, { status, note });
+
+// ===============================
 // Export Base URL for direct use
 // ===============================
 export { API_BASE_URL };
@@ -302,5 +339,22 @@ export default {
   getVerifications,
   getDeliveryRequests,
   sendCourierEmailAPI,
-  submitContact
+  submitContact,
+  // Agent Module
+  agentLogin,
+  getAgents,
+  createAgent,
+  updateAgent,
+  deleteAgent,
+  toggleAgent,
+  getEligibleAgents,
+  assignAgent,
+  autoAssignAgent,
+  getApplicationAssignment,
+  getAllAssignments,
+  getMyAssignments,
+  getAssignmentDetail,
+  acceptAssignment,
+  rejectAssignment,
+  updateAssignmentStatus,
 };

@@ -1,9 +1,10 @@
 import {
   Search, Filter, Eye, CheckCircle, Clock, XCircle, Users, X,
   MapPin, Mail, CreditCard, Truck, FileCheck, CheckCircle2, Circle,
-  Send, Copy, Check, AlertCircle, MessageCircle
+  Send, Copy, Check, AlertCircle, MessageCircle, Zap
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import AgentAssignmentPanel from "./AgentAssignmentPanel";
 import EmptyState from "../../components/EmptyState";
 import { FaWhatsapp } from "react-icons/fa";
 import { getApplications, sendNotification, updateApplicationStatus, downloadDocument } from "../../services/api";
@@ -527,27 +528,8 @@ Please check your email for detailed information or contact us if you have any q
                   </div>
                 </div>
 
-                {/* Agent Assignment */}
-                <div className="space-y-3 pt-4 border-t border-slate-100">
-                  <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                    <Users size={18} className="text-blue-600" /> Assign Agent
-                  </h4>
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      placeholder="Enter agent name..."
-                      className="flex-1 border rounded-xl p-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500"
-                      value={selectedStudent.agent || ""}
-                      onChange={(e) => setSelectedStudent({ ...selectedStudent, agent: e.target.value })}
-                    />
-                    <button
-                      onClick={() => updateStatus(selectedStudent.raw_id, selectedStudent.status, selectedStudent.admin_message, selectedStudent.agent)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition"
-                    >
-                      Assign
-                    </button>
-                  </div>
-                </div>
+                {/* Agent Assignment Panel */}
+                <AgentAssignmentPanel application={selectedStudent} />
 
                 {/* Action Buttons */}
                 <div className="pt-6 border-t border-slate-100">
@@ -599,29 +581,53 @@ Please check your email for detailed information or contact us if you have any q
                   <button onClick={() => setSelectedStudent(null)} className="hidden md:block p-1 rounded-full hover:bg-slate-200 transition"><X size={20} /></button>
                 </div>
 
-                <div className="relative space-y-8">
-                  <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-slate-200"></div>
-                  {selectedStudent.trackingHistory?.map((item, index) => (
-                    <div key={index} className="relative pl-10">
-                      <div className={`absolute left-0 top-0 w-6 h-6 rounded-full flex items-center justify-center z-10 border-2 ${item.status === 'completed' ? 'bg-green-500 border-green-500 text-white' :
-                        item.status === 'failed' ? 'bg-red-500 border-red-500 text-white' :
-                          item.status === 'current' ? 'bg-white border-blue-500 text-blue-500' :
-                            'bg-white border-slate-300 text-slate-300'
+                <div className="relative space-y-6">
+                  {/* Vertical connecting line */}
+                  <div className="absolute left-[15px] top-4 bottom-4 w-[2px] bg-slate-200 z-0"></div>
+                  
+                  {selectedStudent.trackingHistory?.map((item, index) => {
+                    const isCompleted = item.status === 'completed';
+                    const isCurrent = item.status === 'current';
+                    const isUpcoming = item.status === 'upcoming';
+                    const isFailed = item.status === 'failed';
+
+                    return (
+                      <div key={index} className="relative pl-12">
+                        {/* Dot / Icon */}
+                        <div className={`absolute left-0 top-0 w-8 h-8 rounded-full flex items-center justify-center z-10 border-2 transition-colors ${
+                          isCompleted ? 'bg-green-500 border-green-500 text-white shadow-sm' :
+                          isFailed ? 'bg-red-500 border-red-500 text-white shadow-sm' :
+                          isCurrent ? 'bg-white border-blue-500 text-blue-500 shadow-md ring-4 ring-blue-50' :
+                          'bg-white border-slate-200 text-slate-300'
                         }`}>
-                        {item.status === 'completed' ? <CheckCircle2 size={12} /> :
-                          item.status === 'failed' ? <X size={10} /> :
-                            <Circle size={10} fill="currentColor" />}
+                          {isCompleted ? <CheckCircle2 size={16} strokeWidth={3} /> :
+                           isFailed ? <X size={14} strokeWidth={3} /> :
+                           <Circle size={10} fill="currentColor" />}
+                        </div>
+                        
+                        {/* Content */}
+                        <div className={`flex flex-col pt-1 ${isUpcoming ? 'opacity-50' : ''}`}>
+                          <span className={`text-[15px] font-bold ${
+                            isCompleted ? 'text-slate-800' : 
+                            isCurrent ? 'text-blue-700' : 
+                            'text-slate-500'
+                          }`}>
+                            {item.step}
+                          </span>
+                          {item.time && (
+                            <span className="text-xs font-medium text-slate-500 mt-1">
+                              {item.time}
+                            </span>
+                          )}
+                          {isCurrent && (
+                            <p className="text-xs text-blue-600 mt-1.5 font-medium bg-blue-50 inline-block px-2 py-1 rounded-md w-fit">
+                              In Progress
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex flex-col">
-                        <span className={`text-sm font-bold ${item.status === 'upcoming' ? 'text-slate-400' : 'text-slate-700'}`}>
-                          {item.step}
-                        </span>
-                        <span className="text-[11px] font-medium text-slate-400 italic">
-                          {item.time}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <div className="mt-12 bg-blue-600/5 p-4 rounded-2xl border border-blue-200">
@@ -629,6 +635,12 @@ Please check your email for detailed information or contact us if you have any q
                   <p className="text-sm font-bold text-slate-700">{selectedStudent.assigned}</p>
                   <p className="text-xs text-slate-500 mt-1">Delivery via: {selectedStudent.delivery}</p>
                 </div>
+
+                {/* ─── AGENT ASSIGNMENT PANEL (only when approved + paid) ─── */}
+                {selectedStudent.status === "approved" &&
+                  selectedStudent.payment === "Paid" && (
+                  <AgentAssignmentPanel application={selectedStudent} />
+                )}
               </div>
             </div>
           </div>
