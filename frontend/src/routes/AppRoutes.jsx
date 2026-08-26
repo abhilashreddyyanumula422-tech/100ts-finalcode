@@ -56,7 +56,11 @@ const AdminAgentTracking = lazy(() => import("../Admin/pages/AdminAgentTracking"
 import AgentLayout from "../agent/layout/AgentLayout";
 const AgentLogin = lazy(() => import("../agent/pages/AgentLogin"));
 const DeliveryLogin = lazy(() => import("../agent/pages/DeliveryLogin"));
-const AgentDashboard = lazy(() => import("../agent/pages/AgentDashboard"));
+const AgentOverview = lazy(() => import("../agent/pages/AgentOverview"));
+const AgentRequests = lazy(() => import("../agent/pages/AgentRequests"));
+const AgentVisits = lazy(() => import("../agent/pages/AgentVisits"));
+const AgentDelivery = lazy(() => import("../agent/pages/AgentDelivery"));
+const AgentActivity = lazy(() => import("../agent/pages/AgentActivity"));
 const AgentRequestDetail = lazy(() => import("../agent/pages/AgentRequestDetail"));
 
 const LoadingFallback = () => (
@@ -133,8 +137,13 @@ const AppRoutes = () => {
         <Route path="/delivery/login" element={<DeliveryLogin />} />
         <Route path="/agent" element={<AgentProtectedRoute />}>
           <Route element={<AgentLayout />}>
-            <Route path="dashboard" element={<AgentDashboard />} />
+            <Route index element={<AgentOverview />} />
+            <Route path="dashboard" element={<AgentOverview />} />
+            <Route path="requests" element={<AgentRequests />} />
             <Route path="requests/:id" element={<AgentRequestDetail />} />
+            <Route path="visits" element={<AgentVisits />} />
+            <Route path="delivery" element={<AgentDelivery />} />
+            <Route path="activity" element={<AgentActivity />} />
           </Route>
         </Route>
 

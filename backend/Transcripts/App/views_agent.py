@@ -10,6 +10,167 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from .models import Agent, AgentAssignment, Application, UniversityVisitRecord, UniversityVisitPhoto, UniversityDecisionRecord
+from .models import TrackingHistory, College
+
+from functools import wraps
+from datetime import date, timedelta
+from django.core import signing
+
+
+# ─────────────────────────────────────────────────────────────
+# AUTH — SIGNED AGENT TOKENS
+#
+# Agents used to be identified purely by the <agent_id> in the URL,
+# which meant Agent A could read/mutate Agent B's data just by
+# changing the number. Login now issues a signed token; every agent
+# endpoint verifies it and refuses when the token's agent does not
+# match the agent_id in the URL.
+# ─────────────────────────────────────────────────────────────
+
+AGENT_TOKEN_SALT = "100ts.agent.portal.v1"
+AGENT_TOKEN_MAX_AGE = 60 * 60 * 24 * 7  # 7 days
+
+
+def make_agent_token(agent):
+    """Stateless, tamper-proof token. No migration needed."""
+    return signing.dumps(
+        {"agent_id": agent.id, "employee_id": agent.employee_id},
+        salt=AGENT_TOKEN_SALT,
+    )
+
+
+def agent_id_from_token(request):
+    """Read the agent id out of Authorization: Bearer <token> (or X-Agent-Token)."""
+    raw = (request.headers.get("Authorization") or "").strip()
+    if raw.lower().startswith("bearer "):
+        raw = raw[7:].strip()
+    else:
+        raw = (request.headers.get("X-Agent-Token") or "").strip()
+    if not raw:
+        return None
+    try:
+        payload = signing.loads(raw, salt=AGENT_TOKEN_SALT, max_age=AGENT_TOKEN_MAX_AGE)
+    except signing.SignatureExpired:
+        return None
+    except signing.BadSignature:
+        return None
+    return payload.get("agent_id")
+
+
+def agent_required(view_func):
+    """
+    Gate every /api/agent/<agent_id>/... endpoint.
+
+      no/expired token          -> 401 AUTH_REQUIRED
+      token agent != URL agent  -> 403 FORBIDDEN
+      deactivated agent         -> 401 AUTH_REQUIRED
+      otherwise                 -> request.agent is set, view runs
+    """
+    @wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        token_agent_id = agent_id_from_token(request)
+        if token_agent_id is None:
+            return JsonResponse(
+                {"error": "Authentication required. Please sign in again.",
+                 "code": "AUTH_REQUIRED"},
+                status=401,
+            )
+
+        url_agent_id = kwargs.get("agent_id", args[0] if args else None)
+        if url_agent_id is not None and int(url_agent_id) != int(token_agent_id):
+            return JsonResponse(
+                {"error": "Forbidden — you can only access your own assignments.",
+                 "code": "FORBIDDEN"},
+                status=403,
+            )
+
+        try:
+            request.agent = Agent.objects.get(id=token_agent_id, is_active=True)
+        except Agent.DoesNotExist:
+            return JsonResponse(
+                {"error": "Agent account not found or deactivated.",
+                 "code": "AUTH_REQUIRED"},
+                status=401,
+            )
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped
+
+
+# ─────────────────────────────────────────────────────────────
+# WORKFLOW STATE MACHINE (single source of truth)
+# The agent may never pick an arbitrary status — only the legal
+# next step(s) from where they currently are.
+# ─────────────────────────────────────────────────────────────
+
+VALID_TRANSITIONS = {
+    "ASSIGNED_TO_AGENT": [],  # handled by accept / reject endpoints
+    "ACCEPTED": ["IN_PROGRESS"],
+    "IN_PROGRESS": ["DOCUMENTS_COLLECTED"],
+    "DOCUMENTS_COLLECTED": ["SUBMITTED_TO_UNIVERSITY"],
+    "SUBMITTED_TO_UNIVERSITY": ["APPROVED", "REJECTED_BY_UNIVERSITY",
+                                "ADDITIONAL_DOC_REQUIRED", "COMPLETED"],
+    "ADDITIONAL_DOC_REQUIRED": ["SUBMITTED_TO_UNIVERSITY", "DOCUMENTS_COLLECTED", "IN_PROGRESS"],
+    "REJECTED_BY_UNIVERSITY": ["IN_PROGRESS"],
+    "APPROVED": ["COMPLETED", "DELIVERY_ASSIGNED"],
+    "DELIVERY_ASSIGNED": ["PICKED_UP"],
+    "PICKED_UP": ["OUT_FOR_DELIVERY"],
+    "OUT_FOR_DELIVERY": ["DELIVERED"],
+    "DELIVERED": ["COMPLETED"],
+}
+
+STATUS_LABELS = {
+    "ASSIGNED_TO_AGENT": "Assigned",
+    "ACCEPTED": "Accepted",
+    "IN_PROGRESS": "In Progress",
+    "DOCUMENTS_COLLECTED": "Documents Collected",
+    "SUBMITTED_TO_UNIVERSITY": "Submitted to University",
+    "APPROVED": "University Approved",
+    "REJECTED_BY_UNIVERSITY": "University Rejected",
+    "ADDITIONAL_DOC_REQUIRED": "Additional Documents Required",
+    "COMPLETED": "Completed",
+    "REJECTED_BY_AGENT": "Rejected by Agent",
+    "DELIVERY_ASSIGNED": "Delivery Assigned",
+    "PICKED_UP": "Picked Up",
+    "OUT_FOR_DELIVERY": "Out for Delivery",
+    "DELIVERED": "Delivered",
+}
+
+# The single button the agent sees for their current state.
+NEXT_ACTION = {
+    "ACCEPTED":                ("IN_PROGRESS",             "Start Visit / Mark In Progress"),
+    "IN_PROGRESS":             ("DOCUMENTS_COLLECTED",     "Mark Documents Collected"),
+    "DOCUMENTS_COLLECTED":     ("SUBMITTED_TO_UNIVERSITY", "Submit to University"),
+    "APPROVED":                ("DELIVERY_ASSIGNED",       "Arrange Delivery"),
+    "DELIVERY_ASSIGNED":       ("PICKED_UP",               "Mark Picked Up"),
+    "PICKED_UP":               ("OUT_FOR_DELIVERY",        "Mark Out for Delivery"),
+    "OUT_FOR_DELIVERY":        ("DELIVERED",               "Mark Delivered"),
+    "DELIVERED":               ("COMPLETED",               "Close & Mark Completed"),
+    "ADDITIONAL_DOC_REQUIRED": ("SUBMITTED_TO_UNIVERSITY", "Re-submit to University"),
+    "REJECTED_BY_UNIVERSITY":  ("IN_PROGRESS",             "Retry — Back to In Progress"),
+}
+
+# Which inline form the agent must fill at this stage, if any.
+ACTION_FORM = {
+    "ASSIGNED_TO_AGENT":       "ACCEPT_REJECT",
+    "IN_PROGRESS":             "VISIT",
+    "DOCUMENTS_COLLECTED":     "UPLOAD",
+    "SUBMITTED_TO_UNIVERSITY": "DECISION",
+    "APPROVED":                "LOGISTICS",
+}
+
+
+def log_activity(application, status, description):
+    """Append to TrackingHistory — this is what feeds Recent Activity."""
+    try:
+        TrackingHistory.objects.create(
+            application=application,
+            status=status,
+            description=description,
+        )
+    except Exception:
+        pass  # activity logging must never break the workflow
+
 
 
 # ─────────────────────────────────────────────────────────────
@@ -31,6 +192,19 @@ def agent_to_dict(agent):
     }
 
 
+def _campus_location(name):
+    """Best-effort street/city for a university or college name, from the College table."""
+    if not name:
+        return ""
+    try:
+        c = College.objects.filter(name__icontains=name.strip()[:40]).first()
+        if c:
+            return ", ".join([p for p in [c.location, c.district] if p])
+    except Exception:
+        pass
+    return ""
+
+
 def assignment_to_dict(assignment):
     app = assignment.application
     agent = assignment.agent
@@ -41,9 +215,14 @@ def assignment_to_dict(assignment):
     documents_list = [{"id": d.id, "name": d.name, "url": d.file.url if d.file else ""} for d in docs]
     expected_completion = (assignment.assigned_at + timedelta(days=14)).isoformat() if assignment.assigned_at else None
 
+    college_name = first_degree.college if first_degree else ""
+    destination = _campus_location(college_name) or _campus_location(university) or college_name or university
+
     return {
         "id": assignment.id,
         "application_id": app.id,
+        "route_from": (agent.location if agent else "") or "",
+        "route_to": destination or "",
         "application_display_id": app.tracking_id,
         "applicant_name": app.fullName,
         "phone": app.phone,
@@ -65,6 +244,16 @@ def assignment_to_dict(assignment):
         "completed_at": assignment.completed_at.isoformat() if assignment.completed_at else None,
         "agent_rejection_reason": assignment.agent_rejection_reason,
         "progress_note": assignment.progress_note,
+        # ── Workflow guidance (drives the single "next action" button) ──
+        "status_label": STATUS_LABELS.get(assignment.status, assignment.status),
+        "allowed_next_statuses": VALID_TRANSITIONS.get(assignment.status, []),
+        "next_action": (
+            {"status": NEXT_ACTION[assignment.status][0],
+             "label": NEXT_ACTION[assignment.status][1]}
+            if assignment.status in NEXT_ACTION else None
+        ),
+        "action_form": ACTION_FORM.get(assignment.status),
+        "is_terminal": assignment.status in ("COMPLETED", "REJECTED_BY_AGENT"),
         # Phase 6 logistics
         "collected_document_url": assignment.collected_document_url,
         "courier_partner": assignment.courier_partner,
@@ -112,6 +301,7 @@ def agent_login(request):
         return JsonResponse({
             "message": "Login successful",
             "type": "agent",
+            "token": make_agent_token(agent),
             "data": {
                 "id": agent.id,
                 "name": agent.name,
@@ -269,12 +459,12 @@ def admin_assign_agent(request, app_id):
         assignment = AgentAssignment.objects.create(
             application=app,
             agent=agent,
-            status="DELIVERY_ASSIGNED"
+            status="ASSIGNED_TO_AGENT"
         )
         TrackingHistory.objects.create(
             application=app,
-            status="DELIVERY_ASSIGNED",
-            description=f"Delivery assigned to agent: {agent.name}"
+            status="ASSIGNED_TO_AGENT",
+            description=f"Assigned to agent: {agent.name}"
         )
 
         # Notify agent via WhatsApp
@@ -331,12 +521,12 @@ def admin_auto_assign(request, app_id):
         assignment = AgentAssignment.objects.create(
             application=app,
             agent=best_agent,
-            status="DELIVERY_ASSIGNED"
+            status="ASSIGNED_TO_AGENT"
         )
         TrackingHistory.objects.create(
             application=app,
-            status="DELIVERY_ASSIGNED",
-            description=f"Delivery assigned to agent: {best_agent.name}"
+            status="ASSIGNED_TO_AGENT",
+            description=f"Auto-assigned to agent: {best_agent.name}"
         )
 
         try:
@@ -386,6 +576,7 @@ def admin_application_assignment(request, app_id):
 # ─────────────────────────────────────────────────────────────
 
 @api_view(["GET"])
+@agent_required
 def agent_my_assignments(request, agent_id):
     """Agent: get their own assignments only."""
     try:
@@ -400,6 +591,7 @@ def agent_my_assignments(request, agent_id):
 
 
 @api_view(["GET"])
+@agent_required
 def agent_assignment_detail(request, agent_id, assignment_id):
     """Agent: get single assignment — only if it belongs to this agent."""
     try:
@@ -412,6 +604,7 @@ def agent_assignment_detail(request, agent_id, assignment_id):
 
 
 @csrf_exempt
+@agent_required
 def agent_accept_assignment(request, agent_id, assignment_id):
     """Agent accepts an assignment."""
     if request.method != "POST":
@@ -427,6 +620,11 @@ def agent_accept_assignment(request, agent_id, assignment_id):
         assignment.status = "ACCEPTED"
         assignment.accepted_at = timezone.now()
         assignment.save()
+
+        log_activity(
+            assignment.application, "ACCEPTED",
+            "Assignment accepted by agent %s" % (assignment.agent.name if assignment.agent else ""),
+        )
 
         # Notify admin via WhatsApp
         try:
@@ -454,6 +652,7 @@ def agent_accept_assignment(request, agent_id, assignment_id):
 
 
 @csrf_exempt
+@agent_required
 def agent_reject_assignment(request, agent_id, assignment_id):
     """Agent rejects an assignment — reason is mandatory."""
     if request.method != "POST":
@@ -477,6 +676,11 @@ def agent_reject_assignment(request, agent_id, assignment_id):
         assignment.agent_rejection_reason = reason
         assignment.agent = None  # Unassign so admin can reassign
         assignment.save()
+
+        log_activity(
+            assignment.application, "REJECTED_BY_AGENT",
+            "Assignment rejected by agent %s - %s" % (old_agent.name, reason),
+        )
 
         # Notify admin
         try:
@@ -504,24 +708,13 @@ def agent_reject_assignment(request, agent_id, assignment_id):
 
 
 @csrf_exempt
+@agent_required
 def agent_update_status(request, agent_id, assignment_id):
     """Agent updates their progress status."""
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
 
-    VALID_TRANSITIONS = {
-        "ACCEPTED": ["IN_PROGRESS"],
-        "IN_PROGRESS": ["DOCUMENTS_COLLECTED"],
-        "DOCUMENTS_COLLECTED": ["SUBMITTED_TO_UNIVERSITY"],
-        "SUBMITTED_TO_UNIVERSITY": ["APPROVED", "REJECTED_BY_UNIVERSITY", "ADDITIONAL_DOC_REQUIRED", "COMPLETED"],
-        "ADDITIONAL_DOC_REQUIRED": ["SUBMITTED_TO_UNIVERSITY", "DOCUMENTS_COLLECTED", "IN_PROGRESS"],
-        "REJECTED_BY_UNIVERSITY": ["IN_PROGRESS"],
-        "APPROVED": ["COMPLETED", "DELIVERY_ASSIGNED"],
-        "DELIVERY_ASSIGNED": ["PICKED_UP"],
-        "PICKED_UP": ["OUT_FOR_DELIVERY"],
-        "OUT_FOR_DELIVERY": ["DELIVERED"],
-        "DELIVERED": ["COMPLETED"]
-    }
+    # state machine lives at module level (VALID_TRANSITIONS)
 
     try:
         data = json.loads(request.body)
@@ -567,6 +760,11 @@ def agent_update_status(request, agent_id, assignment_id):
             app.status = "completed"
             app.save()
 
+        log_activity(
+            app, new_status,
+            "%s%s" % (STATUS_LABELS.get(new_status, new_status), (" - " + note) if note else ""),
+        )
+
         # Notify
         try:
             from .utils import send_interakt_template
@@ -597,6 +795,7 @@ def agent_update_status(request, agent_id, assignment_id):
 # ─────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@agent_required
 def agent_upload_document(request, agent_id, assignment_id):
     """Agent uploads a scanned copy of the collected document."""
     if request.method != "POST":
@@ -643,6 +842,7 @@ COURIER_TRACKING_URLS = {
 }
 
 @csrf_exempt
+@agent_required
 def agent_add_logistics(request, agent_id, assignment_id):
     """Agent adds courier partner + tracking ID, moves status to OUT_FOR_DELIVERY."""
     if request.method != "POST":
@@ -675,6 +875,11 @@ def agent_add_logistics(request, agent_id, assignment_id):
         app = assignment.application
         app.status = "out_for_delivery"
         app.save()
+
+        log_activity(
+            app, "OUT_FOR_DELIVERY",
+            "Dispatched via %s - tracking %s" % (courier_partner, tracking_id),
+        )
 
         # Notify student
         try:
@@ -742,6 +947,7 @@ def _visit_to_dict(assignment):
 # ─────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@agent_required
 def agent_get_visit_details(request, agent_id, assignment_id):
     """GET the university visit record for an assignment."""
     if request.method != "GET":
@@ -760,6 +966,7 @@ def agent_get_visit_details(request, agent_id, assignment_id):
 # ─────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@agent_required
 def agent_save_visit_details(request, agent_id, assignment_id):
     """POST to create/update the university visit record."""
     if request.method != "POST":
@@ -798,6 +1005,14 @@ def agent_save_visit_details(request, agent_id, assignment_id):
                 setattr(visit, field, data[field])
 
         visit.save()
+
+        log_activity(
+            assignment.application, "UNIVERSITY_VISIT",
+            "University visit recorded%s%s" % (
+                (" on " + str(visit.visit_date)) if visit.visit_date else "",
+                (" - met " + visit.officer_name) if visit.officer_name else "",
+            ),
+        )
 
         # Ensure assignment is IN_PROGRESS
         if assignment.status == "ACCEPTED":
@@ -838,6 +1053,7 @@ def agent_save_visit_details(request, agent_id, assignment_id):
 # ─────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@agent_required
 def agent_upload_visit_photo(request, agent_id, assignment_id):
     """POST a photo for the university visit record."""
     if request.method != "POST":
@@ -885,6 +1101,7 @@ def _decision_to_dict(assignment):
         return None
 
 @csrf_exempt
+@agent_required
 def agent_submit_university_decision(request, agent_id, assignment_id):
     """POST to create the university decision record and transition state."""
     if request.method != "POST":
@@ -892,8 +1109,26 @@ def agent_submit_university_decision(request, agent_id, assignment_id):
     
     try:
         assignment = AgentAssignment.objects.get(id=assignment_id, agent_id=agent_id)
-        if assignment.status != "SUBMITTED_TO_UNIVERSITY":
-            return JsonResponse({"error": f"Cannot submit decision from state {assignment.status}"}, status=400)
+
+        # A decision is entered once the file is with the university, and may be
+        # corrected afterwards while the outcome still stands - an officer changes
+        # their mind, or the agent picked the wrong option. It is locked once the
+        # delivery leg has started or the job is closed.
+        ENTRY_STATES = ("SUBMITTED_TO_UNIVERSITY",)
+        AMEND_STATES = ("APPROVED", "REJECTED_BY_UNIVERSITY", "ADDITIONAL_DOC_REQUIRED")
+
+        if assignment.status not in ENTRY_STATES + AMEND_STATES:
+            if assignment.status in ("DELIVERY_ASSIGNED", "PICKED_UP", "OUT_FOR_DELIVERY",
+                                     "DELIVERED", "COMPLETED"):
+                msg = ("This request has already moved to delivery, so the university "
+                       "decision can no longer be changed.")
+            else:
+                msg = ("You can only record a university decision after the documents "
+                       "have been submitted to the university. Current stage: %s."
+                       % STATUS_LABELS.get(assignment.status, assignment.status))
+            return JsonResponse({"error": msg}, status=400)
+
+        is_amendment = assignment.status in AMEND_STATES
 
         decision_type = request.POST.get("decision")
         if decision_type not in ["APPROVED", "REJECTED", "ADDITIONAL_DOCS"]:
@@ -930,14 +1165,24 @@ def agent_submit_university_decision(request, agent_id, assignment_id):
             if acceptance_date_str:
                 d.acceptance_date = acceptance_date_str
             assignment.status = "APPROVED"
-            # Keep app.status processing until delivery
+            app.status = "approved"
 
         d.save()
         assignment.save()
         app.save()
 
+        log_activity(
+            app, assignment.status,
+            "University decision%s: %s%s" % (
+                " corrected" if is_amendment else "",
+                decision_type,
+                (" - " + d.remarks) if d.remarks else "",
+            ),
+        )
+
         return JsonResponse({
-            "message": f"Decision {decision_type} submitted",
+            "message": f"Decision {decision_type} {'updated' if is_amendment else 'submitted'}",
+            "amended": is_amendment,
             "decision_record": _decision_to_dict(assignment),
             "new_status": assignment.status
         })
@@ -946,3 +1191,145 @@ def agent_submit_university_decision(request, agent_id, assignment_id):
         return JsonResponse({"error": "Assignment not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────
+# AGENT WORK DASHBOARD
+# One call returns everything the agent's home screen needs, all
+# computed server-side and scoped to the logged-in agent.
+# ─────────────────────────────────────────────────────────────
+
+_ASSIGNED_STATES = ("ASSIGNED_TO_AGENT", "ACCEPTED")
+_DELIVERY_STATES = ("DELIVERY_ASSIGNED", "PICKED_UP", "OUT_FOR_DELIVERY", "DELIVERED")
+_TERMINAL_STATES = ("COMPLETED", "REJECTED_BY_AGENT")
+
+
+@api_view(["GET"])
+@agent_required
+def agent_dashboard(request, agent_id):
+    agent = request.agent
+    today = timezone.localdate()
+
+    assignments = (
+        AgentAssignment.objects
+        .filter(agent=agent)
+        .select_related("application")
+        .order_by("-assigned_at")
+    )
+    rows = [assignment_to_dict(a) for a in assignments]
+
+    def has(*states):
+        return [r for r in rows if r["status"] in states]
+
+    stats = {
+        "assigned": len(has(*_ASSIGNED_STATES)),
+        "in_progress": len(has("IN_PROGRESS")),
+        "collected": len(has("DOCUMENTS_COLLECTED")),
+        "completed": len(has("COMPLETED", "DELIVERED")),
+        "pending_acceptance": len(has("ASSIGNED_TO_AGENT")),
+        "at_university": len(has("SUBMITTED_TO_UNIVERSITY")),
+        "out_for_delivery": len(has("OUT_FOR_DELIVERY")),
+        "rejected": len(has("REJECTED_BY_AGENT")),
+        "total": len(rows),
+    }
+
+    active = [r for r in rows if r["status"] not in _TERMINAL_STATES]
+
+    def visit_date_of(r):
+        return (r.get("visit_record") or {}).get("visit_date")
+
+    def urgency(r):
+        if r["status"] == "ASSIGNED_TO_AGENT":
+            return 0
+        vd = visit_date_of(r)
+        if vd and vd <= today.isoformat():
+            return 1
+        if r["status"] in ("IN_PROGRESS", "DOCUMENTS_COLLECTED"):
+            return 2
+        if r["status"] in ("APPROVED",) + _DELIVERY_STATES:
+            return 3
+        return 4
+
+    today_tasks = sorted(active, key=lambda r: (urgency(r), r["id"]))[:6]
+    for r in today_tasks:
+        vd = visit_date_of(r)
+        r["urgency"] = urgency(r)
+        r["is_overdue"] = bool(
+            vd and vd < today.isoformat()
+            and r["status"] not in ("APPROVED",) + _DELIVERY_STATES
+        )
+
+    visits = []
+    for r in rows:
+        vr = r.get("visit_record")
+        pending_visit = r["status"] in ("ACCEPTED", "IN_PROGRESS")
+        if not vr and not pending_visit:
+            continue
+        visits.append({
+            "assignment_id": r["id"],
+            "application_display_id": r["application_display_id"],
+            "student": r["applicant_name"],
+            "student_phone": r["phone"],
+            "university": r["university"],
+            "college": r["college"],
+            "address": r["route_to"],
+            "documents": r["requirement"],
+            "visit_date": (vr or {}).get("visit_date"),
+            "visit_time": (vr or {}).get("visit_time"),
+            "department": (vr or {}).get("department"),
+            "officer_name": (vr or {}).get("officer_name"),
+            "reference_number": (vr or {}).get("university_reference_number"),
+            "scheduled": bool(vr and vr.get("visit_date")),
+            "status": r["status"],
+            "status_label": r["status_label"],
+        })
+    visits.sort(key=lambda v: (v["visit_date"] or "9999-12-31", v["assignment_id"]))
+
+    deliveries = [
+        {
+            "assignment_id": r["id"],
+            "application_display_id": r["application_display_id"],
+            "student": r["applicant_name"],
+            "student_phone": r["phone"],
+            "documents_collected": bool(r["collected_document_url"]),
+            "collected_document_url": r["collected_document_url"],
+            "courier_partner": r["courier_partner"],
+            "tracking_id": r["tracking_id"],
+            "tracking_url": r["tracking_url"],
+            "status": r["status"],
+            "status_label": r["status_label"],
+        }
+        for r in rows
+        if r["status"] in ("APPROVED",) + _DELIVERY_STATES or r["courier_partner"] or r["tracking_id"]
+    ]
+
+    app_ids = [r["application_id"] for r in rows]
+    display_by_app = {r["application_id"]: r["application_display_id"] for r in rows}
+    history = (
+        TrackingHistory.objects
+        .filter(application_id__in=app_ids)
+        .order_by("-created_at")[:12]
+    )
+    recent_activity = [
+        {
+            "id": h.id,
+            "application_id": h.application_id,
+            "application_display_id": display_by_app.get(h.application_id),
+            "status": h.status,
+            "status_label": STATUS_LABELS.get(h.status, h.status.replace("_", " ").title()),
+            "description": h.description or "",
+            "created_at": h.created_at.isoformat(),
+        }
+        for h in history
+    ]
+
+    return Response({
+        "agent": agent_to_dict(agent),
+        "today": today.isoformat(),
+        "stats": stats,
+        "today_tasks": today_tasks,
+        "active_requests": active,
+        "visits": visits,
+        "deliveries": deliveries,
+        "recent_activity": recent_activity,
+    })

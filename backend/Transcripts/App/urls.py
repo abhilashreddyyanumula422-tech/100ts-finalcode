@@ -104,6 +104,9 @@ urlpatterns = [
     path("admin/applications/<int:app_id>/assignment/", views_agent.admin_application_assignment, name="admin-app-assignment"),
     path("admin/agent-assignments/", views_agent.admin_all_assignments, name="admin-all-assignments"),
 
+    # Agent — Work Dashboard (stats, today's tasks, visits, delivery, activity)
+    path("agent/<int:agent_id>/dashboard/", views_agent.agent_dashboard, name="agent-dashboard"),
+
     # Agent — Their Assignments
     path("agent/<int:agent_id>/assignments/", views_agent.agent_my_assignments, name="agent-my-assignments"),
     path("agent/<int:agent_id>/assignments/<int:assignment_id>/", views_agent.agent_assignment_detail, name="agent-assignment-detail"),

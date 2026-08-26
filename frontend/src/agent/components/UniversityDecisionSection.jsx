@@ -2,20 +2,24 @@ import React, { useState } from "react";
 import { submitUniversityDecision } from "../../services/api";
 import { Loader2, CheckCircle2, XCircle, FileText, Upload, Calendar } from "lucide-react";
 
-export default function UniversityDecisionSection({ agentId, assignmentId, onDecisionSaved }) {
-  const [decision, setDecision] = useState("");
+export default function UniversityDecisionSection({
+  agentId, assignmentId, onDecisionSaved, existing = null, onCancel = null,
+}) {
+  const isAmendment = !!existing;
+
+  const [decision, setDecision] = useState(existing?.decision || "");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState({ text: "", isError: false });
 
-  // Fields
-  const [officerName, setOfficerName] = useState("");
-  const [remarks, setRemarks] = useState("");
-  const [rejectionReason, setRejectionReason] = useState("");
+  // Fields (prefilled when correcting a decision that already exists)
+  const [officerName, setOfficerName] = useState(existing?.officer_name || "");
+  const [remarks, setRemarks] = useState(existing?.remarks || "");
+  const [rejectionReason, setRejectionReason] = useState(existing?.rejection_reason || "");
   const [rejectionLetter, setRejectionLetter] = useState(null);
-  const [requiredDocs, setRequiredDocs] = useState("");
-  const [deadline, setDeadline] = useState("");
-  const [refNumber, setRefNumber] = useState("");
-  const [acceptanceDate, setAcceptanceDate] = useState("");
+  const [requiredDocs, setRequiredDocs] = useState(existing?.required_documents || "");
+  const [deadline, setDeadline] = useState(existing?.deadline || "");
+  const [refNumber, setRefNumber] = useState(existing?.university_reference_number || "");
+  const [acceptanceDate, setAcceptanceDate] = useState(existing?.acceptance_date || "");
 
   const handleSubmit = async () => {
     if (!decision) {
@@ -23,6 +27,7 @@ export default function UniversityDecisionSection({ agentId, assignmentId, onDec
       return;
     }
     
+    if (saving) return;
     setSaving(true);
     setMsg({ text: "", isError: false });
 
@@ -45,7 +50,7 @@ export default function UniversityDecisionSection({ agentId, assignmentId, onDec
     try {
       const res = await submitUniversityDecision(agentId, assignmentId, formData);
       if (res.ok) {
-        setMsg({ text: "Decision saved successfully!", isError: false });
+        setMsg({ text: isAmendment ? "Decision updated." : "Decision saved successfully!", isError: false });
         if (onDecisionSaved) onDecisionSaved();
       } else {
         setMsg({ text: res.data?.error || "Failed to save decision", isError: true });
@@ -59,9 +64,22 @@ export default function UniversityDecisionSection({ agentId, assignmentId, onDec
 
   return (
     <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-5">
-      <h3 className="font-black text-slate-800 flex items-center gap-2">
-        🏛️ University Decision
-      </h3>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h3 className="font-black text-slate-800 flex items-center gap-2">
+          🏛️ {isAmendment ? "Correct University Decision" : "University Decision"}
+        </h3>
+        {onCancel && (
+          <button onClick={onCancel} className="text-xs font-bold text-slate-500 hover:text-slate-800 underline">
+            Cancel
+          </button>
+        )}
+      </div>
+      {isAmendment && (
+        <p className="text-xs text-slate-500 -mt-2">
+          Recorded as <strong>{existing.decision}</strong>. Change it below and save to overwrite.
+          Once the request moves to delivery this can no longer be edited.
+        </p>
+      )}
 
       {msg.text && (
         <div className={`p-3 rounded-xl text-sm font-semibold border ${msg.isError ? "bg-red-50 text-red-600 border-red-200" : "bg-green-50 text-green-700 border-green-200"}`}>
@@ -211,7 +229,7 @@ export default function UniversityDecisionSection({ agentId, assignmentId, onDec
             disabled={saving}
             className="w-full flex justify-center items-center gap-2 py-3 bg-slate-800 text-white font-black rounded-xl hover:bg-slate-900 transition mt-4 disabled:opacity-50 shadow"
           >
-            {saving ? <Loader2 size={16} className="animate-spin" /> : "Submit Final Decision"}
+            {saving ? <Loader2 size={16} className="animate-spin" /> : (isAmendment ? "Save Corrected Decision" : "Submit Final Decision")}
           </button>
         </div>
       )}
