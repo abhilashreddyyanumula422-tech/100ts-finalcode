@@ -22,7 +22,7 @@ const STATUS_LABELS = {
  */
 export default function AgentAssignmentPanel({ application }) {
   const [agents, setAgents] = useState([]);
-  const [currentAssignment, setCurrentAssignment] = useState(null);
+  const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [assigning, setAssigning] = useState(false);
   const [autoAssigning, setAutoAssigning] = useState(false);
@@ -42,7 +42,7 @@ export default function AgentAssignmentPanel({ application }) {
         getApplicationAssignment(appId),
       ]);
       if (agentsRes.ok) setAgents(agentsRes.data);
-      if (assignmentRes.ok) setCurrentAssignment(assignmentRes.data?.assignment ?? assignmentRes.data ?? null);
+      if (assignmentRes.ok) setAssignments(assignmentRes.data?.assignments || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -101,10 +101,6 @@ export default function AgentAssignmentPanel({ application }) {
     );
   }
 
-  const assignmentStatus = currentAssignment?.status;
-  const assignedAgent = currentAssignment?.agent;
-  const statusInfo = assignmentStatus ? STATUS_LABELS[assignmentStatus] : null;
-
   return (
     <div className="mt-6 pt-6 border-t border-slate-100 space-y-4">
       <h3 className="text-base font-bold text-slate-700 flex items-center gap-2">
@@ -120,33 +116,49 @@ export default function AgentAssignmentPanel({ application }) {
         </div>
       )}
 
-      {/* Current Assignment Status */}
-      {currentAssignment && assignmentStatus !== "REJECTED_BY_AGENT" && (
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-slate-500 font-semibold uppercase">Currently Assigned</p>
-              <p className="text-lg font-bold text-slate-800 mt-0.5">{assignedAgent?.name || "—"}</p>
-              <p className="text-sm text-slate-500">{assignedAgent?.location || "—"} • {assignedAgent?.experience} yrs exp</p>
-            </div>
-            {statusInfo && (
-              <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${statusInfo.color}`}>
-                {statusInfo.label}
-              </span>
-            )}
-          </div>
-          {currentAssignment.progress_note && (
-            <div className="bg-white rounded-xl p-3 border border-slate-100">
-              <p className="text-xs text-slate-400 font-semibold">Latest Update</p>
-              <p className="text-sm text-slate-700 mt-0.5">{currentAssignment.progress_note}</p>
-            </div>
-          )}
-          {currentAssignment.accepted_at && (
-            <p className="text-xs text-slate-400">
-              Accepted: {new Date(currentAssignment.accepted_at).toLocaleString()}
-            </p>
-          )}
-          {/* Reassign button */}
+      {/* Current Assignments */}
+      {assignments.length > 0 && (
+        <div className="space-y-4">
+          {assignments.map((assignment, idx) => {
+            const assignmentStatus = assignment.status;
+            const assignedAgent = assignment.agent;
+            const statusInfo = assignmentStatus ? STATUS_LABELS[assignmentStatus] : null;
+            
+            return (
+              <div key={assignment.id || idx} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 font-semibold uppercase">Assigned Agent</p>
+                    <p className="text-lg font-bold text-slate-800 mt-0.5">{assignedAgent?.name || "—"}</p>
+                    <p className="text-sm text-slate-500">{assignedAgent?.location || "—"} • {assignedAgent?.experience} yrs exp</p>
+                  </div>
+                  {statusInfo && (
+                    <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${statusInfo.color}`}>
+                      {statusInfo.label}
+                    </span>
+                  )}
+                </div>
+                {assignment.progress_note && (
+                  <div className="bg-white rounded-xl p-3 border border-slate-100">
+                    <p className="text-xs text-slate-400 font-semibold">Latest Update</p>
+                    <p className="text-sm text-slate-700 mt-0.5">{assignment.progress_note}</p>
+                  </div>
+                )}
+                {assignment.accepted_at && (
+                  <p className="text-xs text-slate-400">
+                    Accepted: {new Date(assignment.accepted_at).toLocaleString()}
+                  </p>
+                )}
+                {assignmentStatus === "REJECTED_BY_AGENT" && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 mt-2">
+                    <p className="text-sm font-bold text-red-700">⚠️ Agent Rejected this Assignment</p>
+                    <p className="text-sm text-red-600 mt-1">Reason: {assignment.agent_rejection_reason || "—"}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          
           <div className="flex justify-between items-center pt-2">
             <button
               onClick={fetchData}
@@ -158,21 +170,14 @@ export default function AgentAssignmentPanel({ application }) {
               onClick={() => setShowAssignmentOptions(!showAssignmentOptions)}
               className="text-xs text-purple-600 font-bold hover:underline"
             >
-              {showAssignmentOptions ? "Cancel" : "Change Agent"}
+              {showAssignmentOptions ? "Cancel" : "Assign Another Agent"}
             </button>
           </div>
         </div>
       )}
 
-      {(!currentAssignment || currentAssignment?.status === "REJECTED_BY_AGENT" || showAssignmentOptions) && (
+      {(assignments.length === 0 || showAssignmentOptions) && (
         <>
-          {currentAssignment?.status === "REJECTED_BY_AGENT" && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3">
-              <p className="text-sm font-bold text-red-700">⚠️ Agent Rejected this Assignment</p>
-              <p className="text-sm text-red-600 mt-1">Reason: {currentAssignment.agent_rejection_reason || "—"}</p>
-              <p className="text-xs text-red-400 mt-1">Please assign a new agent below.</p>
-            </div>
-          )}
 
           {/* Auto Assign */}
           <button

@@ -1081,6 +1081,10 @@ html, body, #root {
 ───────────────────────────────────────── */
 async function compressImage(file, _maxSizeMB = 1, maxDimension = 1920) {
   return new Promise((resolve) => {
+    // Bypass compression and return original file
+    resolve({ file, compressed: false });
+    
+    /* ORIGINAL COMPRESSION LOGIC (COMMENTED OUT)
     if (!file.type.startsWith("image/")) {
       resolve({ file, compressed: false });
       return;
@@ -1111,6 +1115,7 @@ async function compressImage(file, _maxSizeMB = 1, maxDimension = 1920) {
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
+    */
   });
 }
 
@@ -1557,32 +1562,98 @@ const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, 
   );
 };
 
-const Step1 = ({ form: _form, goStep, handlePayment, serviceFee }) => (
-  <div>
-    <div className="step-header">
-      <div className="step-icon icon-amber">💳</div>
-      <div>
-        <div className="step-title">Secure Payment</div>
-        <div className="step-subtitle">Complete your payment to begin document processing</div>
+const Step1 = ({ form: _form, goStep, handlePayment, serviceFee, totalAmount, paidAmount }) => {
+  const [paymentType, setPaymentType] = React.useState("FULL");
+  const [loading, setLoading] = React.useState(false);
+  const remainingAmount = totalAmount - paidAmount;
+  const isFirstPayment = paidAmount === 0;
+  
+  const amountToPay = paymentType === "FULL" ? remainingAmount : (isFirstPayment ? totalAmount / 2 : remainingAmount);
+  
+  const onPay = async () => {
+    setLoading(true);
+    await handlePayment(paymentType);
+    setLoading(false);
+  };
+  
+  return (
+    <div>
+      <div className="step-header">
+        <div className="step-icon icon-amber">💳</div>
+        <div>
+          <div className="step-title">Secure Payment</div>
+          <div className="step-subtitle">Complete your payment to begin document processing</div>
+        </div>
+      </div>
+      <div className="info-panel amber">
+        <span className="info-icon">🔒</span>
+        <h3>Payment Summary</h3>
+        <div className="flex justify-between mt-2">
+          <span>Total Amount:</span>
+          <strong>₹ {totalAmount}</strong>
+        </div>
+        {paidAmount > 0 && (
+          <>
+            <div className="flex justify-between mt-1 text-green-600">
+              <span>Already Paid:</span>
+              <strong>₹ {paidAmount}</strong>
+            </div>
+            <div className="flex justify-between mt-1 text-amber-600">
+              <span>Remaining Balance:</span>
+              <strong>₹ {remainingAmount}</strong>
+            </div>
+            
+            <div className="mt-4 mb-2">
+              <div className="flex justify-between text-xs mb-1">
+                <span>Payment Progress</span>
+                <span>{Math.round((paidAmount / totalAmount) * 100)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="bg-green-500 h-2 rounded-full" style={{ width: `${(paidAmount / totalAmount) * 100}%` }}></div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+      
+      {paidAmount === 0 && (
+        <div className="mt-6 mb-4">
+          <h4 className="font-semibold text-gray-700 mb-3">Choose Payment Option</h4>
+          <div className="flex flex-col space-y-3">
+            <label className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all ${paymentType === "FULL" ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500" : "border-gray-200 hover:border-blue-300"}`}>
+              <input type="radio" name="paymentType" value="FULL" checked={paymentType === "FULL"} onChange={() => setPaymentType("FULL")} className="w-4 h-4 text-blue-600" />
+              <div className="ml-3 flex-1">
+                <div className="font-semibold text-gray-800">Full Payment</div>
+                <div className="text-sm text-gray-500">Pay the entire amount of ₹{totalAmount} now</div>
+              </div>
+            </label>
+            <label className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all ${paymentType === "INSTALLMENT" ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500" : "border-gray-200 hover:border-blue-300"}`}>
+              <input type="radio" name="paymentType" value="INSTALLMENT" checked={paymentType === "INSTALLMENT"} onChange={() => setPaymentType("INSTALLMENT")} className="w-4 h-4 text-blue-600" />
+              <div className="ml-3 flex-1">
+                <div className="font-semibold text-gray-800">Installment Payment</div>
+                <div className="text-sm text-gray-500">Pay 50% (₹{totalAmount / 2}) now, and the rest later</div>
+              </div>
+            </label>
+          </div>
+        </div>
+      )}
+
+      {paidAmount > 0 && remainingAmount > 0 && (
+        <div className="mt-6 mb-4">
+          <h4 className="font-semibold text-gray-700 mb-2">Pay Remaining Balance</h4>
+          <p className="text-sm text-gray-600 mb-4">You have a remaining balance of ₹{remainingAmount}. Please pay the remaining balance to proceed.</p>
+        </div>
+      )}
+      
+      <div className="actions mt-6">
+        {paidAmount === 0 && <button className="btn-secondary" onClick={() => goStep(0)}>← Back</button>}
+        <button className="btn-primary sky" onClick={onPay} disabled={loading}>
+          {loading ? "Processing..." : `💳 Pay ₹${amountToPay} Now`}
+        </button>
       </div>
     </div>
-    <div className="info-panel amber">
-      <span className="info-icon">🔒</span>
-      <h3>Service Fee</h3>
-      <div className="amount">₹ {serviceFee}</div>
-      <p>One-time fee for verification, attestation &amp; processing.<br />100% Secure &bull; Instant confirmation</p>
-    </div>
-    <div className="timeline">
-      <TlItem icon="✅" bg="#e0f2fe" title="Documents Received" desc="All your documents submitted successfully." badge="bdone" />
-      <TlItem icon="💳" bg="#fef3c7" title="Payment Required" desc="Complete payment to unlock document review." badge="bprog" />
-      <TlItem icon="🔍" bg="#f1f5f9" title="Document Review" desc="Our team verifies your documents (24–48 hrs)." badge="bwait" last />
-    </div>
-    <div className="actions">
-      <button className="btn-secondary" onClick={() => goStep(0)}>← Back</button>
-      <button className="btn-primary sky" onClick={handlePayment}>💳 &nbsp;Pay ₹{serviceFee} Now</button>
-    </div>
-  </div>
-);
+  );
+};
 
 const Step2 = ({ appStatus, adminMessage, rejectionReason, goStep, onRetry }) => {
   const isPendingApproval = appStatus === "pending_approval";
@@ -1760,7 +1831,8 @@ const NumberedRoadmap = ({ activeStep = 0 }) => {
     { num: 1, label: "Upload Documents", color: "from-blue-500 to-cyan-400", shadow: "shadow-blue-500/40" },
     { num: 2, label: "Verification", color: "from-indigo-500 to-purple-400", shadow: "shadow-indigo-500/40" },
     { num: 3, label: "Payment", color: "from-pink-500 to-rose-400", shadow: "shadow-pink-500/40" },
-    { num: 4, label: "Final Submission", color: "from-emerald-500 to-teal-400", shadow: "shadow-emerald-500/40" }
+    { num: 4, label: "University Verification", color: "from-purple-500 to-pink-500", shadow: "shadow-purple-500/40" },
+    { num: 5, label: "Final Submission", color: "from-emerald-500 to-teal-400", shadow: "shadow-emerald-500/40" }
   ];
 
   return (
@@ -1865,7 +1937,8 @@ const HorizontalRoadmap = () => {
     { num: 1, label: "Upload Documents", hint: "Submitting digital paperwork", icon: "📤", color: "#3b82f6", bg: "#eff6ff" },
     { num: 2, label: "Admin Verification", hint: "Team checks for authenticity", icon: "🔍", color: "#22c55e", bg: "#f0fdf4" },
     { num: 3, label: "Secure Payment", hint: "Processing application fees", icon: "💳", color: "#e11d48", bg: "#fff1f2" },
-    { num: 4, label: "Delivery Successful", hint: "Documents delivered safely", icon: "🚚", color: "#64748b", bg: "#f8fafc" }
+    { num: 4, label: "University Verification", hint: "University checks records", icon: "🎓", color: "#a855f7", bg: "#faf5ff" },
+    { num: 5, label: "Delivery Successful", hint: "Documents delivered safely", icon: "🚚", color: "#64748b", bg: "#f8fafc" }
   ];
 
   useEffect(() => {
@@ -1944,6 +2017,9 @@ export default function Apply() {
   const [adminMessage, setAdminMessage] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
   const [serviceFee, setServiceFee] = useState(20);
+  const [totalAmount, setTotalAmount] = useState(0);
+  const [paidAmount, setPaidAmount] = useState(0);
+  const [paymentStatus, setPaymentStatus] = useState("Pending");
   const [errors, setErrors] = useState({});
 
   const [form, setForm] = useState(() => {
@@ -1995,9 +2071,6 @@ export default function Apply() {
     }
   }, []);
 
-  // ✅ Dynamic API Base
-  // const API_BASE = API_BASE_URL; // Removed as it is imported at the top
-
   const goStep = useCallback((n) => {
     setActiveStep(n);
     setAnimKey(k => k + 1);
@@ -2048,13 +2121,12 @@ export default function Apply() {
             } else if (data.status === "pending_approval" || data.status === "pending") {
               goStep(1);
             } else if (data.status === "rejected" || data.status === "changes_requested") {
-              goStep(1); // Stay on waiting screen to show message
+              goStep(1);
             } else if (data.status === "delivered") {
               goStep(4);
             }
           }
         } catch {
-          // Restore state error handled silently
         }
       }
     };
@@ -2073,24 +2145,25 @@ export default function Apply() {
             setAppStatus(data.status);
             setAdminMessage(data.admin_message || "");
             setRejectionReason(data.rejection_reason || "");
-            if (data.service_fee) {
-              setServiceFee(data.service_fee);
-            }
+            if (data.service_fee) setServiceFee(data.service_fee);
+            if (data.total_amount) setTotalAmount(data.total_amount);
+            if (data.paid_amount) setPaidAmount(data.paid_amount);
+            if (data.payment_status) setPaymentStatus(data.payment_status);
+            
             if (data.status === "approved") {
-              // keep step 1, but Step2 will show proceed to payment
+              if (data.payment_status === "Fully Paid") goStep(3);
+              else goStep(2);
             } else if (data.status === "rejected" || data.status === "changes_requested") {
-              // keep step 1, Step2 will show rejection or changes requested message
             } else if (data.status === "delivered") {
               goStep(4);
             }
           }
         } catch {
-          // Polling error handled silently
         }
       };
 
-      checkStatus(); // Initial check
-      interval = setInterval(checkStatus, 5000); // Check every 5 seconds
+      checkStatus();
+      interval = setInterval(checkStatus, 5000);
     }
     return () => clearInterval(interval);
   }, [activeStep, applicationId, API_BASE, goStep]);
@@ -2100,7 +2173,6 @@ export default function Apply() {
     const finalValue = type === "checkbox" ? checked : value;
     setForm(f => ({ ...f, [name]: finalValue }));
     
-    // Real-time validation
     let errorMsg = "";
     if (name === "fullName") errorMsg = validateName(finalValue);
     else if (name === "email") errorMsg = validateEmail(finalValue);
@@ -2152,12 +2224,11 @@ export default function Apply() {
     if (!type || !docs.length) return;
 
     if (type === 'all') {
-      // Map docs to available types
       const mapping = {
         degree: 'degree',
         marksheet: 'cmm',
         provisional: 'degree',
-        migration: 'internship' // Just as a fallback for demo
+        migration: 'internship'
       };
 
       docs.forEach(doc => {
@@ -2220,7 +2291,7 @@ export default function Apply() {
       Object.keys(form).forEach(key => formData.append(key, form[key]));
       formData.append("trackingId", trackingId);
       formData.append("degrees", JSON.stringify(degrees));
-      formData.append("flowType", flowType); // Save flowType with submission
+      formData.append("flowType", flowType);
 
       Object.keys(upCompressed).forEach(type => {
         const fileData = upCompressed[type];
@@ -2280,7 +2351,7 @@ export default function Apply() {
     }
   };
 
-  const handlePayment = async () => {
+  const handlePayment = async (paymentType = "FULL") => {
     try {
       const res = await fetch(`${API_BASE}/api/create-order/${applicationId}/`, {
         method: "POST",
@@ -2288,7 +2359,7 @@ export default function Apply() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          amount: 20,
+          paymentType,
         }),
       });
 
@@ -2408,6 +2479,8 @@ export default function Apply() {
                     goStep={() => goStep(1)}
                     handlePayment={handlePayment}
                     serviceFee={serviceFee}
+                    totalAmount={totalAmount}
+                    paidAmount={paidAmount}
                   />
                 )}
                 {activeStep === 3 && <Step3 reset={reset} handleRefund={handleRefund} />}

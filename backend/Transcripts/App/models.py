@@ -7,10 +7,17 @@ class ImageUpload(models.Model):
     def __str__(self):
         return self.image.name
 
+import random
+from datetime import datetime
 from django.db import models
 
+def generate_customer_id():
+    year = datetime.now().year
+    random_num = random.randint(1000, 9999)
+    return f"TR{year}{random_num}"
+
 class Users(models.Model):
-   
+    customer_id = models.CharField(max_length=20, primary_key=True, default=generate_customer_id, editable=False)
     name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=10)
@@ -63,7 +70,9 @@ class Application(models.Model):
     email = models.EmailField()
     phone = models.CharField(max_length=15)
     altPhone = models.CharField(max_length=15)
-    payment_status = models.CharField(max_length=20, default="Unpaid")
+    payment_status = models.CharField(max_length=20, default="Pending")
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    paid_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     service_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     requirement = models.CharField(max_length=50)
     referenceNumber = models.CharField(max_length=100, blank=True, null=True)
@@ -108,13 +117,16 @@ class Application(models.Model):
         
         if is_status_changed:
             from .utils import send_interakt_template
+            user = Users.objects.filter(email=self.email).first()
+            cust_id = user.customer_id if user else (self.tracking_id or str(self.id))
+
             # Send WhatsApp template based on new status
             if new_status == "pending_approval":
                 send_interakt_template(
                     phone_number=self.phone,
                     template_name="request_pending",
-                    variables=[self.fullName, self.application_id or str(self.id)],
-                    application_id=self.application_id,
+                    variables=[self.fullName, cust_id],
+                    application_id=cust_id,
                     customer_name=self.fullName,
                     status=new_status
                 )
@@ -122,8 +134,8 @@ class Application(models.Model):
                 send_interakt_template(
                     phone_number=self.phone,
                     template_name="request_approved",
-                    variables=[self.fullName, self.application_id],
-                    application_id=self.application_id,
+                    variables=[self.fullName, cust_id],
+                    application_id=cust_id,
                     customer_name=self.fullName,
                     status=new_status
                 )
@@ -131,8 +143,8 @@ class Application(models.Model):
                 send_interakt_template(
                     phone_number=self.phone,
                     template_name="request_rejected",
-                    variables=[self.fullName, self.application_id, self.rejection_reason or ""],
-                    application_id=self.application_id,
+                    variables=[self.fullName, cust_id, self.rejection_reason or ""],
+                    application_id=cust_id,
                     customer_name=self.fullName,
                     status=new_status
                 )
@@ -140,8 +152,8 @@ class Application(models.Model):
                 send_interakt_template(
                     phone_number=self.phone,
                     template_name="request_rejected", # Reusing rejection template or similar since no specific template exists, or fallback
-                    variables=[self.fullName, self.application_id, getattr(self, 'admin_message', "Please review your application and update the necessary details.")],
-                    application_id=self.application_id,
+                    variables=[self.fullName, cust_id, getattr(self, 'admin_message', "Please review your application and update the necessary details.")],
+                    application_id=cust_id,
                     customer_name=self.fullName,
                     status=new_status
                 )
@@ -200,6 +212,9 @@ class Payment(models.Model):
 
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.CharField(max_length=10, default="INR")
+    
+    payment_type = models.CharField(max_length=20, default="FULL")
+    installment_number = models.IntegerField(default=1)
 
     status = models.CharField(max_length=50, default="PENDING")
 
@@ -337,10 +352,10 @@ class AgentAssignment(models.Model):
         ('DELIVERED', 'Delivered Successfully'),
     ]
 
-    application = models.OneToOneField(
+    application = models.ForeignKey(
         Application,
         on_delete=models.CASCADE,
-        related_name='agent_assignment'
+        related_name='agent_assignments'
     )
     agent = models.ForeignKey(
         Agent,

@@ -258,6 +258,7 @@ Please check your email for detailed information or contact us if you have any q
           <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-bold border-b border-slate-200">
             <tr>
               <th className="p-4">Student</th>
+              {/* <th className="p-4">Customer ID</th> */}
               <th className="p-4">Tracking ID</th>
               <th className="p-4">University</th>
               <th className="p-4">Request Type</th>
@@ -298,11 +299,18 @@ Please check your email for detailed information or contact us if you have any q
                   </div>
                 </td>
 
-                {/* REQUEST ID */}
+                {/* CUSTOMER ID
                 <td className="p-4">
-                  <span className="font-medium text-slate-700">
+                  <div className="font-mono text-slate-600 font-medium text-sm">
+                    {req.customer_id || "N/A"}
+                  </div>
+                </td> */}
+
+                {/* TRACKING ID */}
+                <td className="p-4">
+                  <div className="font-mono font-medium text-slate-700 bg-slate-100 px-2 py-1 rounded inline-block text-sm">
                     {req.id}
-                  </span>
+                  </div>
                 </td>
 
                 {/* UNIVERSITY */}
@@ -324,14 +332,23 @@ Please check your email for detailed information or contact us if you have any q
 
                 {/* PAYMENT */}
                 <td className="p-4">
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-bold ${req.payment === "Paid"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-yellow-100 text-yellow-700"
-                      }`}
-                  >
-                    {req.payment}
-                  </span>
+                  <div className="flex flex-col gap-1 items-start">
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-bold ${req.payment === "Fully Paid"
+                          ? "bg-green-100 text-green-700"
+                          : req.payment === "Partially Paid"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-red-100 text-red-700"
+                        }`}
+                    >
+                      {req.payment === "Partially Paid" ? "🟡 Partially Paid" : req.payment === "Fully Paid" ? "🟢 Fully Paid" : "⚪ " + req.payment}
+                    </span>
+                    {req.payment === "Partially Paid" && req.total_amount > 0 && (
+                      <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded ml-1">
+                        Bal: ₹{req.total_amount - req.paid_amount}
+                      </span>
+                    )}
+                  </div>
                 </td>
 
                 {/* STATUS */}
@@ -487,22 +504,63 @@ Please check your email for detailed information or contact us if you have any q
                       <h3 className="text-xl font-bold text-slate-800">{selectedStudent.fullName || "N/A"}</h3>
                       <div className="flex flex-col gap-1 text-xs text-slate-500 mt-1 font-medium">
                         <span className="flex items-center gap-1"><Mail size={12} /> {selectedStudent.email}</span>
+                        <p className="text-xs font-mono text-slate-400 mt-0.5">
+                          Cust ID: {selectedStudent.customer_id || "N/A"}
+                        </p>
                         <span className="flex items-center gap-1"><MapPin size={12} /> {selectedStudent.district}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className={`p-4 rounded-2xl border flex items-center gap-3 min-w-[180px] ${selectedStudent.payment === "Paid" ? "bg-green-50 border-green-100" : "bg-yellow-50 border-yellow-100"
-                    }`}>
-                    <div className={`p-2 rounded-xl ${selectedStudent.payment === "Paid" ? "bg-green-500 text-white" : "bg-yellow-500 text-white"}`}>
-                      <CreditCard size={20} />
+                  {/* Clean Premium Payment Box */}
+                  <div className="p-5 rounded-3xl flex flex-col gap-4 min-w-[260px] bg-white border border-slate-200 shadow-sm transition-all duration-300 hover:shadow-md">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2.5 rounded-xl flex items-center justify-center ${
+                          selectedStudent.payment === "Fully Paid" ? "bg-emerald-50 text-emerald-600" :
+                          selectedStudent.payment === "Partially Paid" ? "bg-amber-50 text-amber-600" :
+                          "bg-slate-50 text-slate-600"
+                        }`}>
+                          <CreditCard size={20} strokeWidth={2.5} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Payment</p>
+                          <p className={`text-sm font-bold ${
+                            selectedStudent.payment === "Fully Paid" ? "text-emerald-700" :
+                            selectedStudent.payment === "Partially Paid" ? "text-amber-700" :
+                            "text-slate-700"
+                          }`}>{selectedStudent.payment}</p>
+                        </div>
+                      </div>
+                      
+                      {selectedStudent.payment === "Fully Paid" && (
+                         <div className="bg-emerald-500 rounded-full p-1 text-white shadow-sm">
+                           <CheckCircle2 size={16} strokeWidth={3} />
+                         </div>
+                      )}
                     </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Payment</p>
-                      <p className={`text-sm font-bold ${selectedStudent.payment === "Paid" ? "text-green-700" : "text-yellow-700"}`}>
-                        {selectedStudent.payment}
-                      </p>
-                    </div>
+
+                    {selectedStudent.total_amount > 0 && (
+                      <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col gap-2">
+                        <div className="flex justify-between items-center">
+                           <span className="text-xs font-semibold text-slate-500">Total Amount</span>
+                           <span className="text-sm font-bold text-slate-800">₹{selectedStudent.total_amount}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                           <span className="text-xs font-semibold text-slate-500">Amount Paid</span>
+                           <span className="text-sm font-bold text-emerald-600">₹{selectedStudent.paid_amount}</span>
+                        </div>
+                        {selectedStudent.total_amount - selectedStudent.paid_amount > 0 && (
+                          <>
+                            <div className="h-px bg-slate-200 w-full my-1"></div>
+                            <div className="flex justify-between items-center">
+                               <span className="text-xs font-bold text-slate-700">Remaining</span>
+                               <span className="text-sm font-black text-amber-600 bg-amber-100/50 px-2 py-0.5 rounded-md">₹{selectedStudent.total_amount - selectedStudent.paid_amount}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -544,27 +602,29 @@ Please check your email for detailed information or contact us if you have any q
                 </div>
 
                 {/* Agent Assignment Panel */}
-                <AgentAssignmentPanel application={selectedStudent} />
+                {(selectedStudent.payment === "Fully Paid" || selectedStudent.payment === "Partially Paid") && (
+                  <AgentAssignmentPanel application={selectedStudent} />
+                )}
 
                 {/* Action Buttons */}
                 <div className="pt-6 border-t border-slate-100">
 
-                  {/* Action Buttons Row */}
-                  <div className="flex gap-4">
+                  {/* Premium Action Buttons Row */}
+                  <div className="flex flex-wrap md:flex-nowrap gap-3">
                     <button
                       onClick={() => {
                         setApprovingStudent(selectedStudent);
                         setServicePrice("");
                       }}
                       disabled={selectedStudent.status === "approved"}
-                      className={`flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg transition
-        ${selectedStudent.status === "approved"
-                          ? "bg-green-200 text-green-800 cursor-not-allowed"
-                          : "bg-green-600 text-white hover:bg-green-700"
+                      className={`flex-1 py-3.5 px-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all duration-300 border-2
+                        ${selectedStudent.status === "approved"
+                          ? "bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed"
+                          : "bg-white text-emerald-600 border-emerald-100 hover:bg-emerald-50 hover:border-emerald-400 shadow-sm hover:shadow-emerald-500/20 hover:-translate-y-0.5"
                         }`}
                     >
-                      <CheckCircle size={18} />
-                      Approve
+                      <CheckCircle size={18} className={selectedStudent.status === "approved" ? "opacity-50" : ""} />
+                      <span>Approve</span>
                     </button>
 
                     <button
@@ -573,14 +633,14 @@ Please check your email for detailed information or contact us if you have any q
                         setRejectionReason("");
                       }}
                       disabled={selectedStudent.status === "rejected"}
-                      className={`flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition
-        ${selectedStudent.status === "rejected"
-                          ? "bg-red-200 text-red-800 cursor-not-allowed"
-                          : "bg-red-50 text-red-600 hover:bg-red-100 border border-red-100"
+                      className={`flex-1 py-3.5 px-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all duration-300 border-2
+                        ${selectedStudent.status === "rejected"
+                          ? "bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed"
+                          : "bg-white text-rose-600 border-rose-100 hover:bg-rose-50 hover:border-rose-400 shadow-sm hover:shadow-rose-500/20 hover:-translate-y-0.5"
                         }`}
                     >
-                      <XCircle size={18} />
-                      Reject
+                      <XCircle size={18} className={selectedStudent.status === "rejected" ? "opacity-50" : ""} />
+                      <span>Reject</span>
                     </button>
 
                     <button
@@ -590,14 +650,14 @@ Please check your email for detailed information or contact us if you have any q
                         setExactProblem('');
                       }}
                       disabled={selectedStudent.status === "changes_requested"}
-                      className={`flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition
-        ${selectedStudent.status === "changes_requested"
-                          ? "bg-yellow-200 text-yellow-800 cursor-not-allowed"
-                          : "bg-yellow-50 text-yellow-600 hover:bg-yellow-100 border border-yellow-100"
+                      className={`flex-1 py-3.5 px-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all duration-300 border-2
+                        ${selectedStudent.status === "changes_requested"
+                          ? "bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed"
+                          : "bg-white text-amber-500 border-amber-100 hover:bg-amber-50 hover:border-amber-400 shadow-sm hover:shadow-amber-500/20 hover:-translate-y-0.5"
                         }`}
                     >
-                      <AlertCircle size={18} />
-                      Request Changes
+                      <AlertCircle size={18} className={selectedStudent.status === "changes_requested" ? "opacity-50" : ""} />
+                      <span className="whitespace-nowrap">Fix Issues</span>
                     </button>
                   </div>
                 </div>

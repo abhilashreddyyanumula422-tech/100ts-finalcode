@@ -507,6 +507,10 @@ def get_applications(request):
         first_degree = app.degrees.first()
         university = first_degree.university if first_degree else "N/A"
         app_type = app.requirement
+        
+        from .models import Users
+        user_obj = Users.objects.filter(email=app.email).first()
+        customer_id = user_obj.customer_id if user_obj else "N/A"
 
         # Build Tracking Timeline
         stages = [
@@ -525,8 +529,8 @@ def get_applications(request):
         if app.status in ['approved', 'completed']:
             current_stage_idx = max(current_stage_idx, 1)
         
-        agent_assignment = getattr(app, 'agent_assignment', None)
-        if agent_assignment:
+        agent_assignments = app.agent_assignments.all()
+        for agent_assignment in agent_assignments:
             # Map assignment status to stage
             agent_status_map = {
                 'IN_PROGRESS': 2,
@@ -557,7 +561,8 @@ def get_applications(request):
             })
 
         data.append({
-            "id": f"REQ-{app.id:03}",
+            "id": app.tracking_id,
+            "customer_id": customer_id,
             "raw_id": app.id,
             "fullName": app.fullName,
             "email": app.email,
@@ -565,9 +570,11 @@ def get_applications(request):
             "university": university,
             "type": app_type,
             "payment": app.payment_status,
+            "total_amount": app.total_amount,
+            "paid_amount": app.paid_amount,
             "status": app.status,
-            "agent": agent_assignment.agent.name if agent_assignment and agent_assignment.agent else "Unassigned",
-            "assigned": agent_assignment.agent.name if agent_assignment and agent_assignment.agent else "Unassigned",
+            "agent": ", ".join([a.agent.name for a in agent_assignments if a.agent]) if agent_assignments else "Unassigned",
+            "assigned": ", ".join([a.agent.name for a in agent_assignments if a.agent]) if agent_assignments else "Unassigned",
             "delivery": "Standard Courier",
             "district": getattr(app, 'district', 'N/A'), # if added
             "documentsList": [
@@ -736,7 +743,7 @@ def get_application_status(request):
             return Response({"error": "Tracking ID or Email required"}, status=400)
             
         # Fetch agent assignment and decision record
-        assignment = getattr(app, 'agent_assignment', None)
+        assignment = app.agent_assignments.first()
         decision = getattr(assignment, 'decision_record', None) if assignment else None
         
         # Build document list
@@ -886,7 +893,7 @@ def get_verified_applications(request):
             university = first_degree.university if first_degree else "N/A"
             
             data.append({
-                "id": f"VER-{app.id:03}",
+                "id": app.tracking_id,
                 "raw_id": app.id,
                 "student": app.fullName,
                 "college": university,
@@ -1111,7 +1118,7 @@ from .serializers import DeliveryRequestSerializer
 @api_view(["GET"])
 def delivery_requests(request):
     apps = Application.objects.filter(
-        payment_status="Paid"
+        payment_status__in=["Fully Paid", "Partially Paid", "Paid"]
     ).order_by("-id")
 
     data = []
@@ -1195,6 +1202,8 @@ class CreateCashfreeOrder(APIView):
             id=application_id
         )
 
+        payment_type = request.data.get("paymentType", "FULL")
+
         env = Cashfree.PRODUCTION if settings.CASHFREE_ENVIRONMENT == 'PRODUCTION' else Cashfree.SANDBOX
         Cashfree.XApiVersion = "2023-08-01"  # Required for v6 SDK
         cashfree_client = Cashfree(
@@ -1224,40 +1233,75 @@ class CreateCashfreeOrder(APIView):
         )
 
         # DYNAMIC PRICING CALCULATION
-        order_amount = 1.00 # Fallback default
-        if application.service_fee and application.service_fee > 0:
-            order_amount = float(application.service_fee)
+        if application.total_amount and float(application.total_amount) > 0:
+            total_order_amount = float(application.total_amount)
         else:
-            first_degree = application.degrees.first()
-            if first_degree and first_degree.university:
-                from .models import Certificate
-                try:
-                    # Find the certificate price mapping
-                    cert = Certificate.objects.filter(
-                        college__name__icontains=first_degree.university,
-                        name__icontains=application.requirement
-                    ).first()
-                    if cert and cert.price > 0:
-                        order_amount = float(cert.price)
-                except Exception as e:
-                    print(f"Failed to fetch dynamic price: {e}")
+            total_order_amount = 1.00 # Fallback default
+            if application.service_fee and application.service_fee > 0:
+                total_order_amount = float(application.service_fee)
+            else:
+                first_degree = application.degrees.first()
+                if first_degree and first_degree.university:
+                    from .models import Certificate
+                    try:
+                        cert = Certificate.objects.filter(
+                            college__name__icontains=first_degree.university,
+                            name__icontains=application.requirement
+                        ).first()
+                        if cert and cert.price > 0:
+                            total_order_amount = float(cert.price)
+                    except Exception as e:
+                        print(f"Failed to fetch dynamic price: {e}")
+            
+            application.total_amount = total_order_amount
+            application.save()
+
+        # Calculate remaining and final order amount
+        paid = float(application.paid_amount)
+        remaining = total_order_amount - paid
+
+        if remaining <= 0:
+            return Response({"success": False, "error": "Application is already fully paid."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if payment_type == "INSTALLMENT":
+            if paid == 0:
+                # First installment: 50%
+                order_amount = total_order_amount / 2
+            else:
+                # Subsequent installments: remaining balance
+                order_amount = remaining
+        else:
+            order_amount = remaining
+
+        # Determine installment number
+        installment_number = Payment.objects.filter(application=application, status="PAID").count() + 1
+
+        from cashfree_pg.models.order_meta import OrderMeta
+        order_meta = OrderMeta(
+            return_url=f"{settings.FRONTEND_URL}/payment/status?order_id={order_id}"
+        )
 
         order_request = CreateOrderRequest(
             order_id=order_id,
             order_amount=order_amount,
             order_currency="INR",
-            customer_details=customer_details
+            customer_details=customer_details,
+            order_meta=order_meta
         )
 
         try:
             # v6 SDK: call on instance, no version string positional arg
             response = cashfree_client.PGCreateOrder(order_request)
 
+            raw_session_id = response.data.payment_session_id
+
             payment = Payment.objects.create(
                 application=application,
                 order_id=order_id,
-                payment_session_id=response.data.payment_session_id,
+                payment_session_id=raw_session_id,
                 amount=order_amount,
+                payment_type=payment_type,
+                installment_number=installment_number,
                 status="PENDING"
             )
 
@@ -1324,18 +1368,29 @@ class VerifyPayment(APIView):
             order_id=order_id
         )
 
+        previous_status = payment.status
         payment.status = response.data.order_status
         payment.save()
 
         from .utils import send_interakt_template
-        if response.data.order_status == "PAID":
-            payment.application.payment_status = "Paid"
-            payment.application.save()
-            send_interakt_template(payment.application.phone, "payment_status", [payment.application.fullName, payment.application.application_id, "Successful"])
-        elif response.data.order_status == "FAILED":
-            send_interakt_template(payment.application.phone, "payment_status", [payment.application.fullName, payment.application.application_id, "Failed"])
-        elif response.data.order_status in ["PENDING", "ACTIVE"]:
-            send_interakt_template(payment.application.phone, "payment_status", [payment.application.fullName, payment.application.application_id, "Pending"])
+        track_id = payment.application.tracking_id or str(payment.application.id)
+        
+        if response.data.order_status == "PAID" and previous_status != "PAID":
+            application = payment.application
+            application.paid_amount = float(application.paid_amount) + float(payment.amount)
+            remaining = float(application.total_amount) - float(application.paid_amount)
+            
+            if remaining <= 0:
+                application.payment_status = "Fully Paid"
+            else:
+                application.payment_status = "Partially Paid"
+                
+            application.save()
+            send_interakt_template(application.phone, "payment_status", [application.fullName, track_id, "Successful"])
+        elif response.data.order_status == "FAILED" and previous_status != "FAILED":
+            send_interakt_template(payment.application.phone, "payment_status", [payment.application.fullName, track_id, "Failed"])
+        elif response.data.order_status in ["PENDING", "ACTIVE"] and previous_status not in ["PENDING", "ACTIVE"]:
+            send_interakt_template(payment.application.phone, "payment_status", [payment.application.fullName, track_id, "Pending"])
 
         serializer = PaymentSerializer(payment)
         return Response(serializer.data)
@@ -1398,16 +1453,24 @@ def cashfree_webhook(request):
         )
 
         if event == "PAYMENT_SUCCESS_WEBHOOK":
+            if payment.status != "PAID":
+                payment.status = "PAID"
+                payment.save()
 
-            payment.status = "PAID"
-            payment.save()
-
-            application = payment.application
-            application.payment_status = "Paid"
-            application.save()
-            
-            from .utils import send_interakt_template
-            send_interakt_template(application.phone, "payment_status", [application.fullName, application.application_id, "Successful"])
+                application = payment.application
+                application.paid_amount = float(application.paid_amount) + float(payment.amount)
+                remaining = float(application.total_amount) - float(application.paid_amount)
+                
+                if remaining <= 0:
+                    application.payment_status = "Fully Paid"
+                else:
+                    application.payment_status = "Partially Paid"
+                    
+                application.save()
+                
+                from .utils import send_interakt_template
+                track_id = application.tracking_id or str(application.id)
+                send_interakt_template(application.phone, "payment_status", [application.fullName, track_id, "Successful"])
 
         elif event == "PAYMENT_FAILED_WEBHOOK":
 
@@ -1416,7 +1479,8 @@ def cashfree_webhook(request):
             
             application = payment.application
             from .utils import send_interakt_template
-            send_interakt_template(application.phone, "payment_status", [application.fullName, application.application_id, "Failed"])
+            track_id = application.tracking_id or str(application.id)
+            send_interakt_template(application.phone, "payment_status", [application.fullName, track_id, "Failed"])
 
     except Payment.DoesNotExist:
         pass

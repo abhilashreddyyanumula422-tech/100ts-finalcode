@@ -44,7 +44,7 @@ def assignment_to_dict(assignment):
     return {
         "id": assignment.id,
         "application_id": app.id,
-        "application_display_id": f"REQ-{app.id:03}",
+        "application_display_id": app.tracking_id,
         "applicant_name": app.fullName,
         "phone": app.phone,
         "email": app.email,
@@ -263,7 +263,8 @@ def admin_assign_agent(request, app_id):
         agent = Agent.objects.get(id=agent_id, is_active=True)
 
         from .models import TrackingHistory
-        AgentAssignment.objects.filter(application=app).delete()
+        if AgentAssignment.objects.filter(application=app, agent=agent).exists():
+            return JsonResponse({"error": "Agent is already assigned to this application"}, status=400)
 
         assignment = AgentAssignment.objects.create(
             application=app,
@@ -282,7 +283,7 @@ def admin_assign_agent(request, app_id):
             send_interakt_template(
                 phone_number=agent.mobile,
                 template_name="agent_assigned",
-                variables=[agent.name, app.fullName, f"REQ-{app.id:03}"],
+                variables=[agent.name, app.fullName, app.tracking_id],
                 application_id=app.application_id,
                 customer_name=app.fullName,
                 status="ASSIGNED_TO_AGENT"
@@ -324,7 +325,9 @@ def admin_auto_assign(request, app_id):
         best_agent = min(active_agents, key=score)
 
         from .models import TrackingHistory
-        AgentAssignment.objects.filter(application=app).delete()
+        if AgentAssignment.objects.filter(application=app, agent=best_agent).exists():
+            return JsonResponse({"error": "Best agent is already assigned to this application"}, status=400)
+
         assignment = AgentAssignment.objects.create(
             application=app,
             agent=best_agent,
@@ -341,7 +344,7 @@ def admin_auto_assign(request, app_id):
             send_interakt_template(
                 phone_number=best_agent.mobile,
                 template_name="agent_assigned",
-                variables=[best_agent.name, app.fullName, f"REQ-{app.id:03}"],
+                variables=[best_agent.name, app.fullName, app.tracking_id],
                 application_id=app.application_id,
                 customer_name=app.fullName,
                 status="ASSIGNED_TO_AGENT"
@@ -371,12 +374,11 @@ def admin_all_assignments(request):
 
 @api_view(["GET"])
 def admin_application_assignment(request, app_id):
-    """Get the current assignment for a specific application."""
-    try:
-        assignment = AgentAssignment.objects.get(application_id=app_id)
-        return Response(assignment_to_dict(assignment))
-    except AgentAssignment.DoesNotExist:
-        return Response({"assignment": None})
+    """Get all assignments for a specific application."""
+    assignments = AgentAssignment.objects.filter(application_id=app_id).order_by('-assigned_at')
+    return Response({
+        "assignments": [assignment_to_dict(a) for a in assignments]
+    })
 
 
 # ─────────────────────────────────────────────────────────────
@@ -433,7 +435,7 @@ def agent_accept_assignment(request, agent_id, assignment_id):
             send_interakt_template(
                 phone_number=assignment.agent.mobile,
                 template_name="agent_accepted",
-                variables=[assignment.agent.name, app.fullName, f"REQ-{app.id:03}"],
+                variables=[assignment.agent.name, app.fullName, app.tracking_id],
                 application_id=app.application_id,
                 customer_name=app.fullName,
                 status="ACCEPTED"
@@ -483,7 +485,7 @@ def agent_reject_assignment(request, agent_id, assignment_id):
             send_interakt_template(
                 phone_number=old_agent.mobile,
                 template_name="agent_rejected",
-                variables=[old_agent.name, app.fullName, f"REQ-{app.id:03}", reason],
+                variables=[old_agent.name, app.fullName, app.tracking_id, reason],
                 application_id=app.application_id,
                 customer_name=app.fullName,
                 status="REJECTED_BY_AGENT"
@@ -812,7 +814,7 @@ def agent_save_visit_details(request, agent_id, assignment_id):
             send_interakt_template(
                 phone_number=assignment.agent.mobile if assignment.agent else "",
                 template_name="visit_updated",
-                variables=[assignment.agent.name if assignment.agent else "", app.fullName, f"REQ-{app.id:03}"],
+                variables=[assignment.agent.name if assignment.agent else "", app.fullName, app.tracking_id],
                 application_id=app.application_id,
                 customer_name=app.fullName,
                 status="IN_PROGRESS"

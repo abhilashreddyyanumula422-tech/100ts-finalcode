@@ -108,7 +108,7 @@ def get_agent_applications(request, agent_id):
     for app in apps:
         dp = app.assigned_delivery_person
         data.append({
-            "id": f"REQ-{app.id:03}",
+            "id": app.tracking_id,
             "raw_id": app.id,
             "fullName": app.fullName,
             "certificate": app.requirement,
@@ -151,7 +151,7 @@ def get_delivery_tasks(request, dp_id):
     data = []
     for app in apps:
         data.append({
-            "id": f"REQ-{app.id:03}",
+            "id": app.tracking_id,
             "raw_id": app.id,
             "fullName": app.fullName,
             "certificate": app.requirement,
