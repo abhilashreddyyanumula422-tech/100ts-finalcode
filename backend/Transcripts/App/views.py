@@ -1289,17 +1289,12 @@ class CreateCashfreeOrder(APIView):
         # Determine installment number
         installment_number = Payment.objects.filter(application=application, status="PAID").count() + 1
 
-        from cashfree_pg.models.order_meta import OrderMeta
-        order_meta = OrderMeta(
-            return_url=f"{settings.FRONTEND_URL}/payment/status?order_id={order_id}"
-        )
-
+        # Do not set return_url for modal checkout, it conflicts with JS Promise
         order_request = CreateOrderRequest(
             order_id=order_id,
             order_amount=order_amount,
             order_currency="INR",
-            customer_details=customer_details,
-            order_meta=order_meta
+            customer_details=customer_details
         )
 
         try:
