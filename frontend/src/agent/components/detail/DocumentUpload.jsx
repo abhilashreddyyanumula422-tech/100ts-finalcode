@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Upload, CheckCircle2 } from "lucide-react";
 import { ActionButton } from "../ui";
-import { uploadCollectedDocument } from "../../../services/api";
+import { uploadCollectedDocument, updateAssignmentStatus } from "../../../services/api";
 
 export default function DocumentUpload({ agentId, assignmentId, existingUrl, onUploaded }) {
   const [file, setFile] = useState(null);
@@ -26,7 +26,14 @@ export default function DocumentUpload({ agentId, assignmentId, existingUrl, onU
     setBusy(true); setError("");
     try {
       const res = await uploadCollectedDocument(agentId, assignmentId, file);
-      if (res.ok) { setFile(null); onUploaded?.(); }
+      if (res.ok) { 
+        const advanceRes = await updateAssignmentStatus(agentId, assignmentId, "SUBMITTED_TO_UNIVERSITY", "");
+        if (!advanceRes.ok) {
+           setError("Document uploaded, but failed to advance status.");
+        }
+        setFile(null); 
+        onUploaded?.(); 
+      }
       else setError(res.data?.error || "Upload failed.");
     } catch { setError("Network error during upload."); }
     finally { setBusy(false); }

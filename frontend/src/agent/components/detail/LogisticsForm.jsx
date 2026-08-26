@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Truck } from "lucide-react";
 import { ActionButton, Banner } from "../ui";
 import { COURIERS } from "../../constants/workflow";
-import { addLogistics } from "../../../services/api";
+import { addLogistics, updateAssignmentStatus } from "../../../services/api";
 
 export default function LogisticsForm({ agentId, assignmentId, assignment: a, onSaved }) {
   const [courier, setCourier] = useState(a.courier_partner || "Delhivery");
@@ -15,7 +15,14 @@ export default function LogisticsForm({ agentId, assignmentId, assignment: a, on
     setBusy(true); setError("");
     try {
       const res = await addLogistics(agentId, assignmentId, courier, tracking.trim());
-      if (res.ok) { setTracking(""); onSaved?.(); }
+      if (res.ok) { 
+        const advanceRes = await updateAssignmentStatus(agentId, assignmentId, "PICKED_UP", "");
+        if (!advanceRes.ok) {
+           setError("Tracking details saved, but failed to advance status.");
+        }
+        setTracking(""); 
+        onSaved?.(); 
+      }
       else setError(res.data?.error || "Could not save logistics.");
     } catch { setError("Network error."); }
     finally { setBusy(false); }

@@ -6,7 +6,7 @@ import { PageLoading, PageError } from "../components/PageState";
 import { Banner } from "../components/ui";
 import {
   RequestHeader, StudentPanel, UniversityPanel,
-  WorkflowTracker, DecisionPanel, DeliveryPanel, ActionPanel,
+  WorkflowTracker, ActionPanel,
 } from "../components/detail";
 
 export default function AgentRequestDetail() {
@@ -23,12 +23,19 @@ export default function AgentRequestDetail() {
   const refresh = () => { reload(); reloadDashboard(true); };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 max-w-3xl mx-auto">
       <RequestHeader assignment={assignment} />
 
       {toast && (
         <Banner tone={toast.isError ? "danger" : "success"}>{toast.message}</Banner>
       )}
+
+      <div className="grid sm:grid-cols-2 gap-5">
+        <StudentPanel assignment={assignment} />
+        <UniversityPanel assignment={assignment} />
+      </div>
+
+      <WorkflowTracker status={assignment.status} />
 
       <ActionPanel
         assignment={assignment}
@@ -37,30 +44,6 @@ export default function AgentRequestDetail() {
         onChanged={refresh}
         onNotify={notify}
       />
-
-      <div className="grid lg:grid-cols-2 gap-5 items-start">
-        <div className="space-y-5">
-          <StudentPanel assignment={assignment} />
-          <UniversityPanel assignment={assignment} />
-        </div>
-        <div className="space-y-5">
-          <WorkflowTracker status={assignment.status} />
-          <DecisionPanel
-            assignment={assignment}
-            agentId={agentId}
-            assignmentId={id}
-            onSaved={refresh}
-          />
-          <DeliveryPanel assignment={assignment} />
-        </div>
-      </div>
-
-      {assignment.progress_note && (
-        <div className="bg-white rounded-xl ring-1 ring-slate-200/80 p-5">
-          <p className="text-[11px] font-medium text-slate-400">Latest note</p>
-          <p className="text-[13px] text-slate-700 mt-1">{assignment.progress_note}</p>
-        </div>
-      )}
     </div>
   );
 }

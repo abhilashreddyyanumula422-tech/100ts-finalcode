@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { saveVisitDetails, getVisitDetails, uploadVisitPhoto } from "../../services/api";
+import { saveVisitDetails, getVisitDetails, uploadVisitPhoto, updateAssignmentStatus } from "../../services/api";
 import { CheckSquare, Square, Save, Upload, Loader2, IndianRupee, Image as ImageIcon } from "lucide-react";
 
 export default function UniversityVisitSection({ agentId, assignmentId, onVisitSaved }) {
@@ -59,7 +59,14 @@ export default function UniversityVisitSection({ agentId, assignmentId, onVisitS
     try {
       const res = await saveVisitDetails(agentId, assignmentId, visit);
       if (res.ok) {
-        setMsg({ text: "Visit details saved successfully!", isError: false });
+        // Auto advance to DOCUMENTS_COLLECTED on success
+        const advanceRes = await updateAssignmentStatus(agentId, assignmentId, "DOCUMENTS_COLLECTED", "");
+        if (advanceRes.ok) {
+          setMsg({ text: "Visit saved and status advanced!", isError: false });
+        } else {
+          setMsg({ text: "Visit saved, but failed to advance status.", isError: true });
+        }
+        
         if (res.data?.visit) {
           setVisit(prev => ({ ...prev, ...res.data.visit }));
         }

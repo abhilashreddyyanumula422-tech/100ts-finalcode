@@ -577,6 +577,7 @@ def get_applications(request):
             "assigned": ", ".join([a.agent.name for a in agent_assignments if a.agent]) if agent_assignments else "Unassigned",
             "delivery": "Standard Courier",
             "district": getattr(app, 'district', 'N/A'), # if added
+            "user_acknowledged": app.user_acknowledged,
             "documentsList": [
                 {"id": doc.id, "name": doc.name, "status": "Verified", "url": request.build_absolute_uri(doc.file.url)}
                 for doc in app.documents.all()
@@ -761,6 +762,7 @@ def get_application_status(request):
             "tracking_id": app.tracking_id,
             "application_id": app.id,
             "service_fee": app.service_fee,
+            "user_acknowledged": app.user_acknowledged,
             "documents": documents,
             "courier_partner": assignment.courier_partner if assignment else None,
             "agent_tracking_id": assignment.tracking_id if assignment else None,
@@ -776,6 +778,17 @@ def get_application_status(request):
         })
     except Application.DoesNotExist:
         return Response({"error": "Application not found"}, status=404)
+
+@api_view(['POST'])
+def acknowledge_delivery(request, id):
+    try:
+        app = Application.objects.get(id=id)
+        app.user_acknowledged = True
+        app.save(update_fields=['user_acknowledged'])
+        return Response({"message": "Delivery acknowledged successfully"})
+    except Application.DoesNotExist:
+        return Response({"error": "Application not found"}, status=404)
+
 
 from .models import Certificate
 from .serializers import CertificateSerializer

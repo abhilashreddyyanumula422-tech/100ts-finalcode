@@ -368,6 +368,11 @@ Please check your email for detailed information or contact us if you have any q
                   >
                     {req.status === "pending_approval" ? "Pending Approval" : req.status || "Pending"}
                   </span>
+                  {req.user_acknowledged && (
+                    <div className="mt-2 flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md w-max border border-emerald-100 shadow-sm">
+                      <CheckCircle2 size={12} /> Acknowledged
+                    </div>
+                  )}
                 </td>
 
                 {/* ACTIONS */}

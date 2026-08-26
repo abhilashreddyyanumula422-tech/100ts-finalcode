@@ -32,6 +32,7 @@ urlpatterns = [
     path("send-notification/", views.send_notification),
     path('update-status/', views.update_status),
     path('application/<int:id>/update-status/', views.update_status),
+    path('application/<int:id>/acknowledge/', views.acknowledge_delivery),
     path("add_certificate/", views.add_certificate),
     path("colleges/<int:pk>/certificates/", views.get_college_certificates),
     path("certificates/<int:id>/", views.certificate_detail),  # PUT & DELETE

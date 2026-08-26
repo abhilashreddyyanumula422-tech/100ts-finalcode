@@ -91,6 +91,7 @@ class Application(models.Model):
         choices=STATUS_CHOICES,
         default='pending_approval'
     )
+    user_acknowledged = models.BooleanField(default=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -2011,6 +2011,7 @@ export default function Apply() {
   const [activeStep, setActiveStep] = useState(0);
   const [trackId, setTrackId] = useState("");
   const [animKey, setAnimKey] = useState(0);
+  const [showAckModal, setShowAckModal] = useState(false);
 
   const [applicationId, setApplicationId] = useState(() => localStorage.getItem("applicationId") || null);
   const [appStatus, setAppStatus] = useState("pending_approval");
@@ -2116,14 +2117,18 @@ export default function Apply() {
 
             // Map status to step
             if (data.status === "approved") {
-              if (data.payment_status === "Paid") goStep(3);
+              if (data.payment_status === "Paid" || data.payment_status === "Fully Paid") goStep(3);
               else goStep(2);
             } else if (data.status === "pending_approval" || data.status === "pending") {
               goStep(1);
             } else if (data.status === "rejected" || data.status === "changes_requested") {
               goStep(1);
-            } else if (data.status === "delivered") {
-              goStep(4);
+            } else if (String(data.status || "").toLowerCase() === "completed" || ["DELIVERED", "COMPLETED"].includes(String(data.agent_status || "").toUpperCase()) || data.status === "delivered") {
+              if (!data.user_acknowledged) {
+                setShowAckModal(true);
+              } else {
+                goStep(4);
+              }
             }
           }
         } catch {
@@ -2151,11 +2156,15 @@ export default function Apply() {
             if (data.payment_status) setPaymentStatus(data.payment_status);
             
             if (data.status === "approved") {
-              if (data.payment_status === "Fully Paid") goStep(3);
+              if (data.payment_status === "Fully Paid" || data.payment_status === "Paid") goStep(3);
               else goStep(2);
             } else if (data.status === "rejected" || data.status === "changes_requested") {
-            } else if (data.status === "delivered") {
-              goStep(4);
+            } else if (String(data.status || "").toLowerCase() === "completed" || ["DELIVERED", "COMPLETED"].includes(String(data.agent_status || "").toUpperCase()) || data.status === "delivered") {
+              if (!data.user_acknowledged) {
+                setShowAckModal(true);
+              } else {
+                goStep(4);
+              }
             }
           }
         } catch {
@@ -2436,6 +2445,22 @@ export default function Apply() {
     goStep(0);
   };
 
+  const handleAcknowledge = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/application/${applicationId}/acknowledge/`, {
+        method: "POST"
+      });
+      if (res.ok) {
+        setShowAckModal(false);
+        goStep(4);
+      } else {
+        alert("Failed to acknowledge. Please try again.");
+      }
+    } catch (e) {
+      alert("Error acknowledging delivery.");
+    }
+  };
+
   const fillPct = Math.round(((activeStep + 1) / (PROC.length)) * 100);
 
   return (
@@ -2489,6 +2514,35 @@ export default function Apply() {
             </AnimatePresence>
           </div>
 
+          <AnimatePresence>
+            {showAckModal && (
+              <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                  className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl relative overflow-hidden"
+                >
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-emerald-600" />
+                  <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mb-4 text-emerald-600">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">Delivery Complete!</h3>
+                  <p className="text-[14px] text-slate-500 mb-6 leading-relaxed">
+                    Your verified documents have been successfully delivered. Please confirm you've received everything in order to complete this assignment.
+                  </p>
+                  <button 
+                    onClick={handleAcknowledge}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-emerald-200"
+                  >
+                    I Acknowledge & Accept
+                  </button>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
 
         </div>
       </div>

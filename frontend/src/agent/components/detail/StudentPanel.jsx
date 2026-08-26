@@ -2,9 +2,17 @@ import React from "react";
 import { User, Phone, Mail, FileText, Calendar, Info, Paperclip, MessageCircle } from "lucide-react";
 import { Section, Field, ActionButton } from "../ui";
 import { whatsappUrl, mailtoUrl, telUrl, greetingFor, displayId, longDate } from "../../utils/format";
+import { API_BASE_URL } from "../../../services/api";
 
 export default function StudentPanel({ assignment: a }) {
   const ref = displayId(a);
+  
+  const getDocUrl = (url) => {
+    if (!url) return "#";
+    if (url.startsWith("http")) return url;
+    return `${API_BASE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+  };
+
   return (
     <Section title="Student" icon={<User size={15} />} padded>
       <div className="flex gap-2 flex-wrap mb-5">
@@ -52,7 +60,7 @@ export default function StudentPanel({ assignment: a }) {
           </p>
           <div className="flex flex-wrap gap-2">
             {a.documents.map((doc, i) => (
-              <a key={doc.id || i} href={doc.url} target="_blank" rel="noopener noreferrer"
+              <a key={doc.id || i} href={getDocUrl(doc.url)} target="_blank" rel="noopener noreferrer"
                  className="text-[12px] font-medium text-blue-700 bg-blue-50 ring-1 ring-inset ring-blue-200 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition">
                 {doc.name || "Document"}
               </a>

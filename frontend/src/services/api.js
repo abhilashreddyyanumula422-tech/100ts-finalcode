@@ -141,6 +141,11 @@ export const getApplicationStatus = async (trackingId, email) => {
   return apiGet(`/api/application-status/?${params.toString()}`);
 };
 
+export const acknowledgeDelivery = async (applicationId) => {
+  return apiPost(`/api/application/${applicationId}/acknowledge/`);
+};
+
+
 // Payment API
 export const createOrder = async (amount, applicationId) => {
   return apiPost("/api/create-order/", { amount, application_id: applicationId });
@@ -625,6 +630,7 @@ export default {
   getApplications,
   submitApplication,
   getApplicationStatus,
+  acknowledgeDelivery,
   createOrder,
   verifyPayment,
   refundPayment,
