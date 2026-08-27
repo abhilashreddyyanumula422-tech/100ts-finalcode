@@ -427,6 +427,20 @@ const Navbar = () => {
               )}
             </AnimatePresence>
           </li>
+          {isLoggedIn && (user?.type === "admin" || user?.data?.email?.endsWith("@admin.org") || user?.email?.endsWith("@admin.org")) && (
+            <li>
+              <Link to="/admin" className="text-blue-600 font-bold hover:text-blue-700 transition-colors">
+                ADMIN PANEL
+              </Link>
+            </li>
+          )}
+          {isLoggedIn && user?.type === "agent" && (
+            <li>
+              <Link to="/agent" className="text-blue-600 font-bold hover:text-blue-700 transition-colors">
+                AGENT PANEL
+              </Link>
+            </li>
+          )}
         </ul>
 
         {/* LOGIN BUTTON */}
@@ -557,6 +571,20 @@ const Navbar = () => {
                     </ul>
                   )}
                 </li>
+                {isLoggedIn && (user?.type === "admin" || user?.data?.email?.endsWith("@admin.org") || user?.email?.endsWith("@admin.org")) && (
+                  <li>
+                    <Link to="/admin" className="text-blue-600 font-bold block" onClick={() => setIsMobileMenuOpen(false)}>
+                      ADMIN PANEL
+                    </Link>
+                  </li>
+                )}
+                {isLoggedIn && user?.type === "agent" && (
+                  <li>
+                    <Link to="/agent" className="text-blue-600 font-bold block" onClick={() => setIsMobileMenuOpen(false)}>
+                      AGENT PANEL
+                    </Link>
+                  </li>
+                )}
               </ul>
 
               {/* MOBILE AUTH */}

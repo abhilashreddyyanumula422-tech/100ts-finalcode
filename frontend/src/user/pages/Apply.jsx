@@ -2106,6 +2106,13 @@ export default function Apply() {
             if (data.service_fee) {
               setServiceFee(data.service_fee);
             }
+            const totalAmt = (data.total_amount && Number(data.total_amount) > 0)
+              ? Number(data.total_amount)
+              : (data.service_fee ? Number(data.service_fee) : 0);
+            setTotalAmount(totalAmt);
+            if (data.paid_amount !== undefined && data.paid_amount !== null) {
+              setPaidAmount(Number(data.paid_amount));
+            }
             if (data.application_id) {
               setApplicationId(data.application_id);
               localStorage.setItem("applicationId", data.application_id);
@@ -2151,8 +2158,13 @@ export default function Apply() {
             setAdminMessage(data.admin_message || "");
             setRejectionReason(data.rejection_reason || "");
             if (data.service_fee) setServiceFee(data.service_fee);
-            if (data.total_amount) setTotalAmount(data.total_amount);
-            if (data.paid_amount) setPaidAmount(data.paid_amount);
+            const totalAmt = (data.total_amount && Number(data.total_amount) > 0)
+              ? Number(data.total_amount)
+              : (data.service_fee ? Number(data.service_fee) : 0);
+            setTotalAmount(totalAmt);
+            if (data.paid_amount !== undefined && data.paid_amount !== null) {
+              setPaidAmount(Number(data.paid_amount));
+            }
             if (data.payment_status) setPaymentStatus(data.payment_status);
             
             if (data.status === "approved") {

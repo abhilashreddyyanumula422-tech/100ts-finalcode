@@ -680,6 +680,7 @@ def update_status(request, id=None):
                 app.rejection_reason = rejection_reason.strip()
             if service_fee is not None:
                 app.service_fee = service_fee
+                app.total_amount = service_fee
             app.save()
             
             from .utils import send_interakt_template
@@ -725,7 +726,9 @@ def get_app_status(request, id):
             "rejection_reason": app.rejection_reason,
             "payment_status": app.payment_status,
             "tracking_id": app.tracking_id,
-            "service_fee": app.service_fee
+            "service_fee": app.service_fee,
+            "total_amount": app.total_amount,
+            "paid_amount": app.paid_amount,
         })
     except Application.DoesNotExist:
         return Response({"error": "Application not found"}, status=404)
@@ -762,6 +765,8 @@ def get_application_status(request):
             "tracking_id": app.tracking_id,
             "application_id": app.id,
             "service_fee": app.service_fee,
+            "total_amount": app.total_amount,
+            "paid_amount": app.paid_amount,
             "user_acknowledged": app.user_acknowledged,
             "documents": documents,
             "courier_partner": assignment.courier_partner if assignment else None,
