@@ -1567,8 +1567,9 @@ const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, 
       </div>
       <div className="actions">
         <button type="submit" className="btn-primary">
-          {isEditingCorrection ? "Submit Correction &nbsp;✓" : "Proceed to Payment &nbsp;→"}
+          {isEditingCorrection ? "Submit Correction ✓" : "Proceed to Payment →"}
         </button>
+
       </div>
     </form>
   );
@@ -2412,6 +2413,9 @@ export default function Apply() {
 
         const data = await res.json();
         if (res.ok) {
+          if (data.token && data.user) {
+            localStorage.setItem("user", JSON.stringify({ ...data.user, token: data.token }));
+          }
           alert("Correction submitted successfully.");
           setIsEditingCorrection(false);
           
@@ -2439,13 +2443,29 @@ export default function Apply() {
         return;
       }
 
+      const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+      const currentToken = currentUser?.token;
+
+      const headers = new Headers();
+      if (currentToken) {
+        headers.append("Authorization", `Token ${currentToken}`);
+      }
+
       const res = await fetch(`${API_BASE}/api/submit/`, {
         method: "POST",
+        headers: headers,
         body: formData,
       });
 
       const data = await res.json();
       if (res.ok) {
+        if (data.token && data.user) {
+          localStorage.setItem("user", JSON.stringify({ 
+            type: "user",
+            token: data.token,
+            data: data.user 
+          }));
+        }
         alert("Your application has been submitted successfully and is waiting for admin approval.");
         setApplicationId(data.application_id);
         setAppStatus("pending_approval");

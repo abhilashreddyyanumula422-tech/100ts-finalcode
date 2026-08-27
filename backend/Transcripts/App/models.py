@@ -25,6 +25,19 @@ class Users(models.Model):
 
     def __str__(self):
         return self.email
+
+import binascii
+import os
+
+class UserToken(models.Model):
+    user = models.OneToOneField(Users, on_delete=models.CASCADE, related_name='auth_token')
+    key = models.CharField(max_length=40, primary_key=True)
+    created = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.key:
+            self.key = binascii.hexlify(os.urandom(20)).decode()
+        return super().save(*args, **kwargs)
     
 class Admin(models.Model):
     name = models.CharField(max_length=100)
@@ -77,6 +90,8 @@ class Application(models.Model):
     requirement = models.CharField(max_length=50)
     referenceNumber = models.CharField(max_length=100, blank=True, null=True)
 
+    customer = models.ForeignKey(Users, on_delete=models.CASCADE, related_name='applications', null=True, blank=True)
+
     termsAccepted = models.BooleanField(default=False)
     specialCondition = models.BooleanField(default=False)
 
@@ -111,8 +126,8 @@ class Application(models.Model):
 
         # Generate a permanent application_id on first creation if not exists
         if not self.application_id and self.id:
-            # Simple sequential ID starting from 101 (if self.id starts at 1)
-            self.application_id = str(self.id + 100)
+            year = datetime.now().year
+            self.application_id = f"APP-{year}-{self.id:06d}"
             # Call super().save again to update just this field without triggering full save logic again
             super().save(update_fields=['application_id'])
         

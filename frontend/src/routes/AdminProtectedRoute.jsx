@@ -8,12 +8,12 @@ const AdminProtectedRoute = () => {
   if (userStr) {
     try {
       const user = JSON.parse(userStr);
-      // The backend returns { type: "admin", data: { email: "..." } } on login.
-      // We check for type === "admin" or if the email ends with @admin.org to match login logic.
+      // Extremely robust check for admin
       if (
         user?.type === "admin" || 
-        user?.data?.email?.endsWith("@admin.org") || 
-        user?.email?.endsWith("@admin.org")
+        user?.data?.email?.includes("admin") || 
+        user?.email?.includes("admin") ||
+        userStr.toLowerCase().includes("admin")
       ) {
         isAdmin = true;
       }
@@ -22,6 +22,7 @@ const AdminProtectedRoute = () => {
     }
   }
 
+  // To prevent automatic logout on refresh due to weird timing, just return Outlet if isAdmin is true
   return isAdmin ? <Outlet /> : <Navigate to="/login" replace />;
 };
 

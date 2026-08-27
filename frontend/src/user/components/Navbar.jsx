@@ -161,12 +161,12 @@ const Navbar = () => {
 
   return (
     <nav className="fixed top-0 z-[100] w-full bg-white/95 border-b border-slate-200 shadow-sm backdrop-blur-md">
-      <div className="flex items-center justify-between gap-3 px-3 py-1 max-w-7xl mx-auto h-[70px]">
+      <div className="flex items-center justify-between gap-6 px-4 md:px-8 2xl:px-12 py-1 w-full max-w-[1920px] mx-auto h-[70px]">
 
         {/* LOGO */}
         <Link
           to="/"
-          className="shrink-0 flex items-center overflow-visible pr-8 md:pr-12 lg:pr-24"
+          className="shrink-0 flex items-center overflow-visible pr-16 md:pr-24 lg:pr-32"
         >
           <img
             src={logo}
@@ -176,7 +176,7 @@ const Navbar = () => {
         </Link>
 
         {/* SEARCH BAR */}
-        <div className="hidden lg:block relative w-full max-w-xs search-box">
+        <div className="hidden lg:block relative w-full max-w-[180px] xl:max-w-xs search-box">
           <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
 
           <input
@@ -361,7 +361,10 @@ const Navbar = () => {
             </AnimatePresence>
           </li>
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0d98806 (UI tweaks, tracking fix, authentication persistence, and navbar enhancements)
           <li>
             <Link
               to="/contact"
@@ -421,22 +424,10 @@ const Navbar = () => {
               )}
             </AnimatePresence>
           </li>
-          {isLoggedIn && (user?.type === "admin" || user?.data?.email?.endsWith("@admin.org") || user?.email?.endsWith("@admin.org")) && (
-            <li>
-              <Link to="/admin" className="text-blue-600 font-bold hover:text-blue-700 transition-colors">
-                ADMIN PANEL
-              </Link>
-            </li>
-          )}
-          {isLoggedIn && user?.type === "agent" && (
-            <li>
-              <Link to="/agent" className="text-blue-600 font-bold hover:text-blue-700 transition-colors">
-                AGENT PANEL
-              </Link>
-            </li>
-          )}
+
         </ul>
 
+<<<<<<< HEAD
         {/* LOGIN / APPLY BUTTONS */}
         <div className="hidden lg:flex items-center gap-3 shrink-0">
           <Link
@@ -445,17 +436,34 @@ const Navbar = () => {
           >
             APPLY
           </Link>
+=======
+        {/* ACTION BUTTONS */}
+        <div className="hidden lg:flex items-center gap-4 shrink-0">
+          {isLoggedIn && (user?.data?.customer_id || user?.customer_id) && (
+            <div className="hidden lg:flex items-center bg-slate-100 text-slate-700 px-3 py-1.5 rounded-full font-bold text-xs tracking-wide">
+              Customer ID: <span className="text-blue-600 ml-1">{user?.data?.customer_id || user?.customer_id}</span>
+            </div>
+          )}
+
+          <Link
+            to="/apply"
+            className="inline-flex items-center justify-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-sm font-bold rounded-full shadow-xl hover:scale-105 transition-all whitespace-nowrap"
+          >
+            APPLY
+          </Link>
+
+>>>>>>> 0d98806 (UI tweaks, tracking fix, authentication persistence, and navbar enhancements)
           {isLoggedIn ? (
             <button
               onClick={handleLogout}
-              className="inline-flex items-center justify-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-sm font-bold rounded-full shadow-xl hover:scale-105 transition-all"
+              className="inline-flex items-center justify-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-sm font-bold rounded-full shadow-xl hover:scale-105 transition-all whitespace-nowrap"
             >
               LOGOUT
             </button>
           ) : (
             <Link
               to="/login"
-              className="inline-flex items-center justify-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-sm font-bold rounded-full shadow-xl hover:scale-105 transition-all"
+              className="inline-flex items-center justify-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-sm font-bold rounded-full shadow-xl hover:scale-105 transition-all whitespace-nowrap"
             >
               LOGIN
             </Link>
@@ -571,20 +579,7 @@ const Navbar = () => {
                     </ul>
                   )}
                 </li>
-                {isLoggedIn && (user?.type === "admin" || user?.data?.email?.endsWith("@admin.org") || user?.email?.endsWith("@admin.org")) && (
-                  <li>
-                    <Link to="/admin" className="text-blue-600 font-bold block" onClick={() => setIsMobileMenuOpen(false)}>
-                      ADMIN PANEL
-                    </Link>
-                  </li>
-                )}
-                {isLoggedIn && user?.type === "agent" && (
-                  <li>
-                    <Link to="/agent" className="text-blue-600 font-bold block" onClick={() => setIsMobileMenuOpen(false)}>
-                      AGENT PANEL
-                    </Link>
-                  </li>
-                )}
+
               </ul>
 
               {/* MOBILE AUTH */}

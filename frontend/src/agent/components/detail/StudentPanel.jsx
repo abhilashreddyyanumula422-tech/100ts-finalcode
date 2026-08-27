@@ -61,7 +61,8 @@ export default function StudentPanel({ assignment: a }) {
           <div className="flex flex-wrap gap-2">
             {a.documents.map((doc, i) => (
               <a key={doc.id || i} href={getDocUrl(doc.url)} target="_blank" rel="noopener noreferrer"
-                 className="text-[12px] font-medium text-blue-700 bg-blue-50 ring-1 ring-inset ring-blue-200 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition">
+                 className="text-[12px] font-medium text-blue-700 bg-blue-50 ring-1 ring-inset ring-blue-200 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition truncate max-w-[250px] inline-block"
+                 title={doc.name || "Document"}>
                 {doc.name || "Document"}
               </a>
             ))}

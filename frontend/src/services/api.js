@@ -121,8 +121,18 @@ export const getApplications = () => {
 
 export const submitApplication = async (formData) => {
   try {
+    const user = JSON.parse(localStorage.getItem("user"));
+    const token = user?.token;
+    
+    console.log("Submitting application. User:", user);
+    console.log("Token to be sent:", token);
+
+    const headers = token ? { "Authorization": `Token ${token}` } : {};
+    console.log("Headers being sent:", headers);
+
     const response = await fetch(`${API_BASE_URL}/api/submit/`, {
       method: "POST",
+      headers: headers,
       body: formData
     });
 

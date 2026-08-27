@@ -235,12 +235,16 @@ def login_user(request):
  
     if user:
         if user.password == password:
+            from .models import UserToken
+            token, created = UserToken.objects.get_or_create(user=user)
             return Response({
                 "message": "User Login successful",
                 "type": "user",
+                "token": token.key,
                 "data": {
                     "name": user.name,
-                    "email": user.email
+                    "email": user.email,
+                    "customer_id": user.customer_id
                 }
             }, status=200)
  
@@ -413,6 +417,11 @@ def validate_email_backend(email):
 @api_view(['POST'])
 def submit_application(request):
     try:
+        from .models import UserToken, Users
+        auth_header = request.headers.get('Authorization')
+        customer = None
+        new_token = None
+        
         data = request.POST if request.POST else request.data
         print(f"DEBUG DATA: {data}")
 
@@ -421,6 +430,23 @@ def submit_application(request):
         if name_err: return Response({"error": name_err}, status=400)
 
         email_err = validate_email_backend(data.get("email"))
+        if email_err: return Response({"error": email_err}, status=400)
+
+        if auth_header and auth_header.startswith('Token '):
+            token_key = auth_header.split(' ')[1]
+            token = UserToken.objects.filter(key=token_key).first()
+            if not token:
+                return Response({"error": "Invalid token."}, status=401)
+            customer = token.user
+        else:
+            # Automatic user generation for unauthenticated submissions
+            email = data.get("email").strip()
+            customer = Users.objects.filter(email=email).first()
+            if not customer:
+                customer = Users.objects.create(email=email, name=data.get("fullName").strip())
+            
+            token, _ = UserToken.objects.get_or_create(user=customer)
+            new_token = token.key
         if email_err: return Response({"error": email_err}, status=400)
 
         phone_err = validate_phone_backend(data.get("phone"))
@@ -434,6 +460,7 @@ def submit_application(request):
 
         # ✅ Create Application safely
         app = Application.objects.create(
+            customer=customer,
             fullName=data.get("fullName", "").strip(),
             email=data.get("email", "").strip(),
             phone=data.get("phone", "").strip(),
@@ -488,10 +515,21 @@ def submit_application(request):
             status="pending_approval"
         )
 
-        return Response({
-            "message": "Submitted Successfully",
-            "application_id": app.id
-        }, status=201)
+        response_data = {
+            "message": "Application submitted successfully",
+            "application_id": app.id,
+            "tracking_id": app.tracking_id
+        }
+        
+        if new_token:
+            response_data["token"] = new_token
+            response_data["user"] = {
+                "name": customer.name,
+                "email": customer.email,
+                "customer_id": customer.customer_id
+            }
+
+        return Response(response_data, status=201)
 
     except Exception as e:
         print("❌ ERROR:", str(e))  # important for debugging
@@ -508,9 +546,7 @@ def get_applications(request):
         university = first_degree.university if first_degree else "N/A"
         app_type = app.requirement
         
-        from .models import Users
-        user_obj = Users.objects.filter(email=app.email).first()
-        customer_id = user_obj.customer_id if user_obj else "N/A"
+        customer_id = app.customer.customer_id if app.customer else "N/A"
 
         # Build Tracking Timeline
         stages = [
@@ -541,11 +577,12 @@ def get_applications(request):
                 'DELIVERED': 7,
                 'COMPLETED': 7,
             }
-            if agent_assignment.status in agent_status_map:
-                current_stage_idx = max(current_stage_idx, agent_status_map[agent_assignment.status])
-            else:
-                current_stage_idx = max(current_stage_idx, 2) # assigned but not picked up yet
-
+            # Add to history if not exists
+            stage = agent_status_map.get(agent_assignment.status, 0)
+            if stage > current_stage_idx:
+                current_stage_idx = stage
+        
+        # Create dummy history for UI rendering based on current stage
         tracking_history = []
         for idx, stage_name in enumerate(stages):
             if idx < current_stage_idx:
@@ -554,14 +591,16 @@ def get_applications(request):
                 status_val = "current"
             else:
                 status_val = "upcoming"
+            
             tracking_history.append({
                 "step": stage_name,
                 "status": status_val,
-                "time": app.created_at.strftime("%b %d, %Y, %I:%M %p") if idx == 0 else "" # Optionally fetch real timestamps from TrackingHistory model
+                "time": app.created_at.strftime("%b %d, %Y, %I:%M %p") if idx == 0 else ""
             })
 
         data.append({
             "id": app.tracking_id,
+            "application_id": app.application_id,
             "customer_id": customer_id,
             "raw_id": app.id,
             "fullName": app.fullName,
@@ -792,6 +831,7 @@ def get_app_status(request, id):
             "admin_message": app.admin_message,
             "rejection_reason": app.rejection_reason,
             "payment_status": app.payment_status,
+            "user_acknowledged": app.user_acknowledged,
             "fullName": app.fullName,
             "email": app.email,
             "phone": app.phone,

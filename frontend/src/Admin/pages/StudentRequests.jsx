@@ -154,7 +154,10 @@ const StudentRequests = () => {
 
     const matchesSearch =
       String(r.fullName || "").toLowerCase().includes(sTerm) ||
-      String(r.id || "").toLowerCase().includes(sTerm);
+      String(r.id || "").toLowerCase().includes(sTerm) ||
+      String(r.application_id || "").toLowerCase().includes(sTerm) ||
+      String(r.customer_id || "").toLowerCase().includes(sTerm) ||
+      String(r.email || "").toLowerCase().includes(sTerm);
 
     const matchesStatus =
       statusFilter === "All" ||
@@ -264,9 +267,9 @@ Please check your email for detailed information or contact us if you have any q
           {/* TABLE HEADER */}
           <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-bold border-b border-slate-200">
             <tr>
-              <th className="p-4">Student</th>
-              {/* <th className="p-4">Customer ID</th> */}
-              <th className="p-4">Tracking ID</th>
+              <th className="p-4 sticky left-0 bg-slate-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Student</th>
+
+              <th className="p-4">App ID / Tracking</th>
               <th className="p-4">University</th>
               <th className="p-4">Request Type</th>
               <th className="p-4">Phone</th>
@@ -281,11 +284,11 @@ Please check your email for detailed information or contact us if you have any q
             {filtered.map((req) => (
               <tr
                 key={req.id}
-                className="border-t border-slate-100 hover:bg-slate-50 transition-all duration-200"
+                className="group border-t border-slate-100 hover:bg-slate-50 transition-all duration-200"
               >
 
                 {/* STUDENT */}
-                <td className="p-4">
+                <td className="p-4 sticky left-0 bg-white group-hover:bg-slate-50 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] transition-colors">
                   <div className="flex items-center gap-3">
 
                     {/* Avatar */}
@@ -294,10 +297,16 @@ Please check your email for detailed information or contact us if you have any q
                     </div>
 
                     {/* Name + Email */}
-                    <div>
+                    <div className="flex flex-col items-start justify-center">
                       <div className="font-semibold text-slate-800">
                         {req.fullName}
                       </div>
+
+                      {req.customer_id && req.customer_id !== "N/A" && (
+                        <div className="inline-block bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wide mt-1 mb-0.5">
+                          ID: {req.customer_id}
+                        </div>
+                      )}
 
                       <div className="text-xs text-slate-500">
                         {req.email}
@@ -306,17 +315,18 @@ Please check your email for detailed information or contact us if you have any q
                   </div>
                 </td>
 
-                {/* CUSTOMER ID
-                <td className="p-4">
-                  <div className="font-mono text-slate-600 font-medium text-sm">
-                    {req.customer_id || "N/A"}
-                  </div>
-                </td> */}
 
-                {/* TRACKING ID */}
-                <td className="p-4">
-                  <div className="font-mono font-medium text-slate-700 bg-slate-100 px-2 py-1 rounded inline-block text-sm">
-                    {req.id}
+                {/* TRACKING ID / APP ID */}
+                <td className="p-4 align-top">
+                  <div className="flex flex-col gap-1">
+                    <div className="font-mono font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded inline-block text-xs whitespace-nowrap w-max">
+                      {req.application_id || "N/A"}
+                    </div>
+                    {req.id && (
+                      <div className="font-mono text-slate-500 text-xs whitespace-nowrap">
+                        TRK: {req.id}
+                      </div>
+                    )}
                   </div>
                 </td>
 
@@ -341,11 +351,11 @@ Please check your email for detailed information or contact us if you have any q
                 <td className="p-4">
                   <div className="flex flex-col gap-1 items-start">
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-bold ${req.payment === "Fully Paid"
-                          ? "bg-green-100 text-green-700"
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-wide whitespace-nowrap ${req.payment === "Fully Paid"
+                          ? "bg-emerald-100 text-emerald-700"
                           : req.payment === "Partially Paid"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-red-100 text-red-700"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-rose-100 text-rose-700"
                         }`}
                     >
                       {req.payment === "Partially Paid" ? "🟡 Partially Paid" : req.payment === "Fully Paid" ? "🟢 Fully Paid" : "⚪ " + req.payment}

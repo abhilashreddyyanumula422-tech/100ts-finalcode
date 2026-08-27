@@ -8,17 +8,22 @@ const STATUS_CONFIG = {
   IN_PROGRESS: { label: "In Progress", color: "bg-indigo-100 text-indigo-700", dot: "bg-indigo-500" },
   DOCUMENTS_COLLECTED: { label: "Docs Collected", color: "bg-cyan-100 text-cyan-700", dot: "bg-cyan-500" },
   SUBMITTED_TO_UNIVERSITY: { label: "At University", color: "bg-purple-100 text-purple-700", dot: "bg-purple-500" },
+  APPROVED: { label: "Approved", color: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
+  REJECTED_BY_UNIVERSITY: { label: "Rejected (Univ)", color: "bg-red-100 text-red-700", dot: "bg-red-500" },
+  ADDITIONAL_DOC_REQUIRED: { label: "More Docs Needed", color: "bg-orange-100 text-orange-700", dot: "bg-orange-500" },
   COMPLETED: { label: "Completed", color: "bg-green-100 text-green-700", dot: "bg-green-500" },
   REJECTED_BY_AGENT: { label: "Rejected", color: "bg-red-100 text-red-700", dot: "bg-red-500" },
 };
 
 const WORKFLOW_STEPS = [
   "ASSIGNED_TO_AGENT", "ACCEPTED", "IN_PROGRESS",
-  "DOCUMENTS_COLLECTED", "SUBMITTED_TO_UNIVERSITY", "COMPLETED"
+  "DOCUMENTS_COLLECTED", "SUBMITTED_TO_UNIVERSITY", 
+  "APPROVED", "COMPLETED"
 ];
 
 function StatusBadge({ status }) {
-  const cfg = STATUS_CONFIG[status] || { label: status, color: "bg-slate-100 text-slate-600", dot: "bg-slate-400" };
+  const normStatus = String(status).toUpperCase();
+  const cfg = STATUS_CONFIG[normStatus] || { label: normStatus, color: "bg-slate-100 text-slate-600", dot: "bg-slate-400" };
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${cfg.color}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
@@ -28,12 +33,36 @@ function StatusBadge({ status }) {
 }
 
 function ProgressBar({ status }) {
-  const idx = WORKFLOW_STEPS.indexOf(status);
-  const pct = status === "REJECTED_BY_AGENT" ? 0 : Math.round(((idx + 1) / WORKFLOW_STEPS.length) * 100);
+  const normStatus = String(status).toUpperCase();
+  let pct = 0;
+  let color = "bg-blue-500";
+  
+  if (normStatus === "REJECTED_BY_AGENT" || normStatus === "REJECTED_BY_UNIVERSITY" || normStatus === "REJECTED") {
+    pct = 0;
+    color = "bg-red-400";
+  } else if (normStatus === "COMPLETED" || normStatus === "DELIVERED" || normStatus.includes("DELIVER")) {
+    pct = 100;
+    color = "bg-green-500";
+  } else if (normStatus === "APPROVED") {
+    pct = 90;
+    color = "bg-emerald-500";
+  } else if (normStatus === "SUBMITTED_TO_UNIVERSITY") {
+    pct = 75;
+  } else if (normStatus === "DOCUMENTS_COLLECTED" || normStatus === "ADDITIONAL_DOC_REQUIRED") {
+    pct = 60;
+    if (normStatus === "ADDITIONAL_DOC_REQUIRED") color = "bg-orange-400";
+  } else if (normStatus === "IN_PROGRESS") {
+    pct = 40;
+  } else if (normStatus === "ACCEPTED") {
+    pct = 25;
+  } else if (normStatus === "ASSIGNED_TO_AGENT" || normStatus === "ASSIGNED") {
+    pct = 10;
+  }
+
   return (
     <div className="w-full bg-slate-100 rounded-full h-1.5">
       <div
-        className={`h-1.5 rounded-full transition-all ${status === "COMPLETED" ? "bg-green-500" : status === "REJECTED_BY_AGENT" ? "bg-red-400" : "bg-blue-500"}`}
+        className={`h-1.5 rounded-full transition-all ${color}`}
         style={{ width: `${pct}%` }}
       />
     </div>
@@ -174,12 +203,15 @@ export default function AdminAgentTracking() {
       (a.applicant_name || "").toLowerCase().includes(q) ||
       (a.application_display_id || "").toLowerCase().includes(q) ||
       (a.agent?.name || "").toLowerCase().includes(q);
-    const matchStatus = filterStatus === "All" || a.status === filterStatus;
+    const matchStatus = filterStatus === "All" || String(a.status).toUpperCase() === filterStatus;
     return matchSearch && matchStatus;
   });
 
   const counts = Object.fromEntries(
-    Object.keys(STATUS_CONFIG).map((s) => [s, assignments.filter((a) => a.status === s).length])
+    Object.keys(STATUS_CONFIG).map((s) => [
+      s, 
+      assignments.filter((a) => String(a.status).toUpperCase() === s).length
+    ])
   );
 
   return (
