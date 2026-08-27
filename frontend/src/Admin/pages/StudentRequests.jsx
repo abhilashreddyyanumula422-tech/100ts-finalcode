@@ -47,6 +47,13 @@ const StudentRequests = () => {
     };
 
     fetchRequests();
+    
+    // Auto-refresh every 10 seconds
+    const interval = setInterval(() => {
+      fetchRequests();
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const handleRequestChanges = async () => {

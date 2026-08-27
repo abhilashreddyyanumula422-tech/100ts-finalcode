@@ -33,6 +33,13 @@ const Dashboard = () => {
       }
     };
     fetchStats();
+    
+    // Auto-refresh every 10 seconds
+    const interval = setInterval(() => {
+      fetchStats();
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) {

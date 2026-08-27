@@ -1575,16 +1575,14 @@ const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, 
 };
 
 const Step1 = ({ form: _form, goStep, handlePayment, serviceFee, totalAmount, paidAmount }) => {
-  const [paymentType, setPaymentType] = React.useState("FULL");
   const [loading, setLoading] = React.useState(false);
   const remainingAmount = totalAmount - paidAmount;
-  const isFirstPayment = paidAmount === 0;
   
-  const amountToPay = paymentType === "FULL" ? remainingAmount : (isFirstPayment ? totalAmount / 2 : remainingAmount);
+  const amountToPay = remainingAmount;
   
   const onPay = async () => {
     setLoading(true);
-    await handlePayment(paymentType);
+    await handlePayment();
     setLoading(false);
   };
   
@@ -1628,28 +1626,6 @@ const Step1 = ({ form: _form, goStep, handlePayment, serviceFee, totalAmount, pa
         )}
       </div>
       
-      {paidAmount === 0 && (
-        <div className="mt-6 mb-4">
-          <h4 className="font-semibold text-gray-700 mb-3">Choose Payment Option</h4>
-          <div className="flex flex-col space-y-3">
-            <label className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all ${paymentType === "FULL" ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500" : "border-gray-200 hover:border-blue-300"}`}>
-              <input type="radio" name="paymentType" value="FULL" checked={paymentType === "FULL"} onChange={() => setPaymentType("FULL")} className="w-4 h-4 text-blue-600" />
-              <div className="ml-3 flex-1">
-                <div className="font-semibold text-gray-800">Full Payment</div>
-                <div className="text-sm text-gray-500">Pay the entire amount of ₹{totalAmount} now</div>
-              </div>
-            </label>
-            <label className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all ${paymentType === "INSTALLMENT" ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500" : "border-gray-200 hover:border-blue-300"}`}>
-              <input type="radio" name="paymentType" value="INSTALLMENT" checked={paymentType === "INSTALLMENT"} onChange={() => setPaymentType("INSTALLMENT")} className="w-4 h-4 text-blue-600" />
-              <div className="ml-3 flex-1">
-                <div className="font-semibold text-gray-800">Installment Payment</div>
-                <div className="text-sm text-gray-500">Pay 50% (₹{totalAmount / 2}) now, and the rest later</div>
-              </div>
-            </label>
-          </div>
-        </div>
-      )}
-
       {paidAmount > 0 && remainingAmount > 0 && (
         <div className="mt-6 mb-4">
           <h4 className="font-semibold text-gray-700 mb-2">Pay Remaining Balance</h4>
@@ -2516,16 +2492,14 @@ export default function Apply() {
     }
   };
 
-  const handlePayment = async (paymentType = "FULL") => {
+  const handlePayment = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/create-order/${applicationId}/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          paymentType,
-        }),
+        body: JSON.stringify({}),
       });
 
       if (!res.ok) {

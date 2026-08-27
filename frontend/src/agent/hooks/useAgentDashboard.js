@@ -27,7 +27,13 @@ export default function useAgentDashboard(agentId) {
     }
   }, [agentId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { 
+    load(); 
+    const interval = setInterval(() => {
+      load(true); // silent refresh
+    }, 10000); // 10 seconds
+    return () => clearInterval(interval);
+  }, [load]);
 
   return { data, loading, refreshing, error, reload: load };
 }

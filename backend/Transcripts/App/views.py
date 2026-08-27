@@ -1378,7 +1378,7 @@ class CreateCashfreeOrder(APIView):
             id=application_id
         )
 
-        payment_type = request.data.get("paymentType", "FULL")
+        payment_type = "FULL"
 
         env = Cashfree.PRODUCTION if settings.CASHFREE_ENVIRONMENT == 'PRODUCTION' else Cashfree.SANDBOX
         Cashfree.XApiVersion = "2023-08-01"  # Required for v6 SDK
@@ -1439,15 +1439,7 @@ class CreateCashfreeOrder(APIView):
         if remaining <= 0:
             return Response({"success": False, "error": "Application is already fully paid."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if payment_type == "INSTALLMENT":
-            if paid == 0:
-                # First installment: 50%
-                order_amount = total_order_amount / 2
-            else:
-                # Subsequent installments: remaining balance
-                order_amount = remaining
-        else:
-            order_amount = remaining
+        order_amount = remaining
 
         # Determine installment number
         installment_number = Payment.objects.filter(application=application, status="PAID").count() + 1
