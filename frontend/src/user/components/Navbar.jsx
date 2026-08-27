@@ -361,10 +361,7 @@ const Navbar = () => {
             </AnimatePresence>
           </li>
 
-<<<<<<< HEAD
 
-=======
->>>>>>> 0d98806 (UI tweaks, tracking fix, authentication persistence, and navbar enhancements)
           <li>
             <Link
               to="/contact"
@@ -427,16 +424,7 @@ const Navbar = () => {
 
         </ul>
 
-<<<<<<< HEAD
-        {/* LOGIN / APPLY BUTTONS */}
-        <div className="hidden lg:flex items-center gap-3 shrink-0">
-          <Link
-            to="/apply"
-            className="inline-flex items-center justify-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-sm font-bold rounded-full shadow-xl hover:scale-105 transition-all"
-          >
-            APPLY
-          </Link>
-=======
+
         {/* ACTION BUTTONS */}
         <div className="hidden lg:flex items-center gap-4 shrink-0">
           {isLoggedIn && (user?.data?.customer_id || user?.customer_id) && (
@@ -452,7 +440,6 @@ const Navbar = () => {
             APPLY
           </Link>
 
->>>>>>> 0d98806 (UI tweaks, tracking fix, authentication persistence, and navbar enhancements)
           {isLoggedIn ? (
             <button
               onClick={handleLogout}
