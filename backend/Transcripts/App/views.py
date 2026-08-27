@@ -1750,7 +1750,9 @@ def get_dashboard_stats(request):
 
 from django.http import HttpResponse
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
+# Letter page size in points (8.5 x 11 inches), avoiding an unavailable
+# reportlab.lib.pagesizes module in environments with partial ReportLab installs.
+letter = (612, 792)
 
 @api_view(['GET'])
 def download_invoice(request, application_id):

@@ -363,12 +363,6 @@ const Navbar = () => {
 
 
           <li>
-            <Link to="/apply" className="inline-flex items-center justify-center px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors">
-              APPLY
-            </Link>
-          </li>
-
-          <li>
             <Link
               to="/contact"
               className="hover:text-blue-600 transition-colors"
@@ -443,8 +437,14 @@ const Navbar = () => {
           )}
         </ul>
 
-        {/* LOGIN BUTTON */}
-        <div className="hidden lg:block shrink-0">
+        {/* LOGIN / APPLY BUTTONS */}
+        <div className="hidden lg:flex items-center gap-3 shrink-0">
+          <Link
+            to="/apply"
+            className="inline-flex items-center justify-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-sm font-bold rounded-full shadow-xl hover:scale-105 transition-all"
+          >
+            APPLY
+          </Link>
           {isLoggedIn ? (
             <button
               onClick={handleLogout}
