@@ -720,15 +720,98 @@ def update_status(request, id=None):
 def get_app_status(request, id):
     try:
         app = Application.objects.get(id=id)
+        assignment = app.agent_assignments.first()
+        decision = getattr(assignment, 'decision_record', None) if assignment else None
+        
+        # Build document list
+        documents = [{"id": doc.id, "name": doc.name, "url": request.build_absolute_uri(doc.file.url)} for doc in app.documents.all()]
+        if assignment and assignment.collected_document_url:
+            documents.append({"id": "collected", "name": "Final Certificate", "url": assignment.collected_document_url})
+
+        # Fetch active issue if any
+        active_issue = app.issues.exclude(status='RESOLVED').first()
+        if not active_issue and assignment and assignment.status == "ADDITIONAL_DOC_REQUIRED":
+            from .models import Users, Issue
+            user = Users.objects.filter(email__iexact=app.email).first()
+            if user:
+                active_issue = Issue.objects.create(
+                    application=app,
+                    agent=assignment.agent,
+                    user=user,
+                    message=app.admin_message or "Additional documents required.",
+                    status='WAITING_FOR_USER',
+                    required_documents=["Additional Document"]
+                )
+
+        active_issue_data = {
+            "id": active_issue.id,
+            "message": active_issue.message,
+            "status": active_issue.status,
+            "user_response": active_issue.user_response,
+            "required_documents": active_issue.required_documents,
+            "created_at": active_issue.created_at.isoformat(),
+            "updated_at": active_issue.updated_at.isoformat(),
+            "documents": [
+                {
+                    "id": doc.id,
+                    "name": doc.name,
+                    "url": request.build_absolute_uri(doc.file.url) if doc.file else ""
+                } for doc in active_issue.documents.all()
+            ]
+        } if active_issue else None
+
+        all_issues = app.issues.all().order_by('created_at')
+        issues_history = [
+            {
+                "id": issue.id,
+                "message": issue.message,
+                "status": issue.status,
+                "user_response": issue.user_response,
+                "required_documents": issue.required_documents,
+                "created_at": issue.created_at.isoformat(),
+                "updated_at": issue.updated_at.isoformat(),
+                "documents": [
+                    {
+                        "id": doc.id,
+                        "name": doc.name,
+                        "url": request.build_absolute_uri(doc.file.url) if doc.file else ""
+                    } for doc in issue.documents.all()
+                ]
+            } for issue in all_issues
+        ]
+
+        agent_details = {
+            "name": assignment.agent.name,
+            "mobile": assignment.agent.mobile,
+            "email": assignment.agent.email
+        } if assignment and assignment.agent else None
+
         return Response({
             "status": app.status,
+            "agent_status": assignment.status if assignment else None,
             "admin_message": app.admin_message,
             "rejection_reason": app.rejection_reason,
             "payment_status": app.payment_status,
+            "fullName": app.fullName,
+            "email": app.email,
+            "phone": app.phone,
+            "altPhone": app.altPhone,
+            "requirement": app.requirement,
+            "referenceNumber": app.referenceNumber,
+            "degrees": [
+                {
+                    "id": d.id,
+                    "type": d.type or "",
+                    "university": d.university,
+                    "course": d.course or "",
+                    "college": d.college
+                } for d in app.degrees.all()
+            ],
+            "active_issue": active_issue_data,
+            "issues_history": issues_history,
+            "agent_details": agent_details,
             "tracking_id": app.tracking_id,
-            "service_fee": app.service_fee,
-            "total_amount": app.total_amount,
-            "paid_amount": app.paid_amount,
+            "service_fee": app.service_fee
         })
     except Application.DoesNotExist:
         return Response({"error": "Application not found"}, status=404)
@@ -755,6 +838,64 @@ def get_application_status(request):
         if assignment and assignment.collected_document_url:
             documents.append({"id": "collected", "name": "Final Certificate", "url": assignment.collected_document_url})
 
+        # Fetch active issue if any
+        active_issue = app.issues.exclude(status='RESOLVED').first()
+        if not active_issue and assignment and assignment.status == "ADDITIONAL_DOC_REQUIRED":
+            from .models import Users, Issue
+            user = Users.objects.filter(email__iexact=app.email).first()
+            if user:
+                active_issue = Issue.objects.create(
+                    application=app,
+                    agent=assignment.agent,
+                    user=user,
+                    message=app.admin_message or "Additional documents required.",
+                    status='WAITING_FOR_USER',
+                    required_documents=["Additional Document"]
+                )
+
+        active_issue_data = {
+            "id": active_issue.id,
+            "message": active_issue.message,
+            "status": active_issue.status,
+            "user_response": active_issue.user_response,
+            "required_documents": active_issue.required_documents,
+            "created_at": active_issue.created_at.isoformat(),
+            "updated_at": active_issue.updated_at.isoformat(),
+            "documents": [
+                {
+                    "id": doc.id,
+                    "name": doc.name,
+                    "url": request.build_absolute_uri(doc.file.url) if doc.file else ""
+                } for doc in active_issue.documents.all()
+            ]
+        } if active_issue else None
+
+        all_issues = app.issues.all().order_by('created_at')
+        issues_history = [
+            {
+                "id": issue.id,
+                "message": issue.message,
+                "status": issue.status,
+                "user_response": issue.user_response,
+                "required_documents": issue.required_documents,
+                "created_at": issue.created_at.isoformat(),
+                "updated_at": issue.updated_at.isoformat(),
+                "documents": [
+                    {
+                        "id": doc.id,
+                        "name": doc.name,
+                        "url": request.build_absolute_uri(doc.file.url) if doc.file else ""
+                    } for doc in issue.documents.all()
+                ]
+            } for issue in all_issues
+        ]
+
+        agent_details = {
+            "name": assignment.agent.name,
+            "mobile": assignment.agent.mobile,
+            "email": assignment.agent.email
+        } if assignment and assignment.agent else None
+
         return Response({
             "status": app.status,
             "agent_status": assignment.status if assignment else None,
@@ -762,6 +903,23 @@ def get_application_status(request):
             "rejection_reason": app.rejection_reason,
             "payment_status": app.payment_status,
             "fullName": app.fullName,
+            "email": app.email,
+            "phone": app.phone,
+            "altPhone": app.altPhone,
+            "requirement": app.requirement,
+            "referenceNumber": app.referenceNumber,
+            "degrees": [
+                {
+                    "id": d.id,
+                    "type": d.type or "",
+                    "university": d.university,
+                    "course": d.course or "",
+                    "college": d.college
+                } for d in app.degrees.all()
+            ],
+            "active_issue": active_issue_data,
+            "issues_history": issues_history,
+            "agent_details": agent_details,
             "tracking_id": app.tracking_id,
             "application_id": app.id,
             "service_fee": app.service_fee,
@@ -1627,4 +1785,105 @@ def download_invoice(request, application_id):
 
     except Application.DoesNotExist:
         return Response({"error": "Application not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(["POST"])
+def user_respond_issue(request, id):
+    try:
+        from .models import Degree, Document, Issue, TrackingHistory
+        app = Application.objects.get(id=id)
+        data = request.POST if request.POST else request.data
+
+        # Update application fields
+        fullName = data.get("fullName")
+        if fullName:
+            app.fullName = fullName.strip()
+        phone = data.get("phone")
+        if phone:
+            app.phone = phone.strip()
+        altPhone = data.get("altPhone")
+        if altPhone:
+            app.altPhone = altPhone.strip()
+        requirement = data.get("requirement")
+        if requirement:
+            app.requirement = requirement.strip()
+        referenceNumber = data.get("referenceNumber")
+        if referenceNumber is not None:
+            app.referenceNumber = referenceNumber.strip() or None
+        app.save()
+
+        # Update degrees
+        degrees_raw = data.get("degrees")
+        if degrees_raw:
+            try:
+                degrees = json.loads(degrees_raw)
+                # Remove existing degrees and recreate
+                app.degrees.all().delete()
+                for d in degrees:
+                    if not (d.get("university") or d.get("college")):
+                        continue
+                    Degree.objects.create(
+                        application=app,
+                        type=d.get("type") or None,
+                        university=d.get("university") or "",
+                        course=d.get("course") or None,
+                        college=d.get("college") or "",
+                    )
+            except json.JSONDecodeError:
+                pass
+
+        # Update active issue
+        active_issue = app.issues.exclude(status='RESOLVED').first()
+        uploaded_doc_ids = []
+        user_message = data.get("user_message", "").strip() or "Student has updated the requested information."
+
+        if active_issue:
+            active_issue.status = 'USER_RESPONDED'
+            active_issue.user_response = user_message
+            active_issue.save()
+
+            # Save files specifically for this issue and link them!
+            for key, file in request.FILES.items():
+                doc = Document.objects.create(
+                    application=app,
+                    doc_type=key,
+                    name=file.name,
+                    file=file,
+                    issue=active_issue
+                )
+                uploaded_doc_ids.append(doc.id)
+
+            app.status = "WAITING_FOR_AGENT"
+            app.save()
+
+            # Transition agent assignment status back to SUBMITTED_TO_UNIVERSITY
+            # so the agent knows there is updated info to review
+            assignment = app.agent_assignments.first()
+            if assignment:
+                assignment.status = 'SUBMITTED_TO_UNIVERSITY'
+                assignment.save()
+
+                try:
+                    TrackingHistory.objects.create(
+                        application=app,
+                        status="USER_RESPONDED",
+                        description=f"User responded: {user_message}"
+                    )
+                except Exception:
+                    pass
+
+            return Response({
+                "issueId": active_issue.id,
+                "requestId": app.id,
+                "userMessage": user_message,
+                "uploadedDocumentIds": uploaded_doc_ids,
+                "submittedAt": active_issue.updated_at.isoformat()
+            })
+
+        return Response({"message": "No active issue found to respond to."})
+    except Application.DoesNotExist:
+        return Response({"error": "Application not found"}, status=404)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
 

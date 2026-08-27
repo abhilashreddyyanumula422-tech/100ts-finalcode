@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Zap, CheckCircle2, XCircle, ArrowRight, Upload, AlertCircle } from "lucide-react";
 import { Section, ActionButton, Banner } from "../ui";
 import { statusLabel } from "../../constants/workflow";
-import { acceptAssignment, rejectAssignment, updateAssignmentStatus, submitUniversityDecision, addLogistics } from "../../../services/api";
+import { acceptAssignment, rejectAssignment, updateAssignmentStatus, submitUniversityDecision, addLogistics, resolveIssue, API_BASE_URL } from "../../../services/api";
 
 export default function ActionPanel({ assignment: a, agentId, assignmentId, onChanged, onNotify }) {
   const [busy, setBusy] = useState(false);
@@ -11,6 +11,7 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
   
   const [showIssue, setShowIssue] = useState(false);
   const [issueText, setIssueText] = useState("");
+  const [requiredDocs, setRequiredDocs] = useState("");
   
   const [showDocs, setShowDocs] = useState(false);
   const [refNum, setRefNum] = useState("");
@@ -83,6 +84,23 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
     finally { setBusy(false); }
   };
 
+  const handleResolveIssue = async () => {
+    setBusy(true);
+    try {
+      const res = await resolveIssue(agentId, assignmentId);
+      if (res.ok) {
+        onNotify?.("Issue marked as resolved");
+        onChanged?.();
+      } else {
+        onNotify?.(res.data?.error || "Failed to resolve issue", true);
+      }
+    } catch {
+      onNotify?.("Network error", true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (a.status === "COMPLETED") {
     return (
       <Section padded>
@@ -98,7 +116,81 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
   return (
     <Section title="Next Action" icon={<Zap size={15} />} padded>
       <div className="space-y-4">
-        
+        {a.status === "ADDITIONAL_DOC_REQUIRED" && (
+          <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 text-[13px] text-slate-700">
+            <div className="flex items-center gap-1.5 text-amber-800 font-bold mb-2 text-[14px]">
+              <AlertCircle size={16} className="text-amber-600" />
+              <span>Active Issue / Action Required</span>
+            </div>
+            <div className="space-y-2">
+              {a.active_issue ? (
+                <>
+                  <p><strong>Problem Raised:</strong> "{a.active_issue.message}"</p>
+                  {a.active_issue.required_documents && a.active_issue.required_documents.length > 0 && (
+                    <p><strong>Requested documents:</strong> {a.active_issue.required_documents.join(", ")}</p>
+                  )}
+                  
+                  {a.active_issue.status === 'USER_RESPONDED' ? (
+                    <div className="bg-emerald-50/70 p-3 rounded-lg border border-emerald-100 mt-2 space-y-2">
+                      <p className="text-emerald-950 font-bold">🟢 User Response Received:</p>
+                      <p className="text-slate-800 italic">"{a.active_issue.user_response || 'No message provided.'}"</p>
+                      
+                      {a.active_issue.documents && a.active_issue.documents.length > 0 && (
+                        <div className="mt-2">
+                          <p className="font-semibold text-slate-700 mb-1">Submitted Documents:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {a.active_issue.documents.map((doc, idx) => (
+                              <a
+                                key={idx}
+                                href={doc.url.startsWith("http") ? doc.url : `${API_BASE_URL}${doc.url}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[11px] font-bold text-blue-700 bg-blue-50 ring-1 ring-inset ring-blue-200 hover:bg-blue-100 px-2 py-1 rounded-md transition"
+                              >
+                                📄 {doc.name}
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="flex gap-2 pt-2">
+                        <ActionButton variant="success" full loading={busy} onClick={handleResolveIssue}>
+                          Received & Continue Next Process
+                        </ActionButton>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="pt-2 border-t border-amber-200/50 space-y-3">
+                      <p className="text-amber-700 font-medium italic flex items-center gap-1">
+                        ⏳ Waiting for student response...
+                      </p>
+                      <div className="bg-white p-3 rounded-lg border border-slate-200">
+                        <p className="text-[12px] text-slate-500 mb-2">If you received the corrected details directly via WhatsApp or Email, click below to proceed:</p>
+                        <ActionButton variant="success" full loading={busy} onClick={handleResolveIssue}>
+                          Received & Continue Next Process
+                        </ActionButton>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="pt-2 space-y-2">
+                  <p className="text-amber-700 font-medium italic flex items-center gap-1">
+                    ⏳ Waiting for student response...
+                  </p>
+                  <div className="bg-white p-3 rounded-lg border border-slate-200">
+                    <p className="text-[12px] text-slate-500 mb-2">Click below to resolve the issue manually and continue processing:</p>
+                    <ActionButton variant="success" full loading={busy} onClick={handleResolveIssue}>
+                      Received & Continue Next Process
+                    </ActionButton>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ASSIGNMENT STAGE */}
         {a.status === "ASSIGNED_TO_AGENT" && (
           <div className="flex gap-3">
@@ -194,9 +286,10 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
         {showIssue && (
           <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 mt-2">
             <p className="text-[13px] font-bold text-amber-800 mb-2">Report Issue</p>
-            <textarea value={issueText} onChange={e => setIssueText(e.target.value)} placeholder="Describe the issue..." className="w-full rounded-lg ring-1 ring-amber-200 px-3 py-2 text-[13px] mb-3 resize-none" rows={2} />
+            <textarea value={issueText} onChange={e => setIssueText(e.target.value)} placeholder="Describe the issue (e.g. passport copy is blur)..." className="w-full rounded-lg ring-1 ring-amber-200 px-3 py-2 text-[13px] mb-2 resize-none" rows={2} />
+            <input type="text" value={requiredDocs} onChange={e => setRequiredDocs(e.target.value)} placeholder="Required documents (comma separated, e.g. Passport, CMM)" className="w-full rounded-lg ring-1 ring-amber-200 px-3 py-2 text-[13px] mb-3" />
             <div className="flex gap-2">
-              <ActionButton variant="accent" full loading={busy} onClick={() => run(() => updateAssignmentStatus(agentId, assignmentId, "ADDITIONAL_DOC_REQUIRED", issueText), "Issue reported").then(() => setShowIssue(false))}>Submit Issue</ActionButton>
+              <ActionButton variant="accent" full loading={busy} onClick={() => run(() => updateAssignmentStatus(agentId, assignmentId, "ADDITIONAL_DOC_REQUIRED", issueText, requiredDocs), "Issue reported").then(() => { setShowIssue(false); setIssueText(""); setRequiredDocs(""); })}>Submit Issue</ActionButton>
               <ActionButton variant="dangerSubtle" full disabled={busy} onClick={() => setShowIssue(false)}>Cancel</ActionButton>
             </div>
           </div>

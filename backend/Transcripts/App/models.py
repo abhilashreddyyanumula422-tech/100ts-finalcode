@@ -181,6 +181,7 @@ class Document(models.Model):
     doc_type = models.CharField(max_length=100)  # cmm / degree / internship
     name = models.CharField(max_length=255)
     file = models.FileField(upload_to="documents/")
+    issue = models.ForeignKey('Issue', on_delete=models.SET_NULL, null=True, blank=True, related_name="documents")
 
     def __str__(self):
         return self.name
@@ -498,3 +499,27 @@ class UniversityDecisionRecord(models.Model):
 
     def __str__(self):
         return f"Decision: {self.decision} for {self.assignment}"
+
+
+class Issue(models.Model):
+    STATUS_CHOICES = [
+        ('OPEN', 'Open'),
+        ('WAITING_FOR_USER', 'Waiting For User'),
+        ('USER_RESPONDED', 'User Responded'),
+        ('UNDER_REVIEW', 'Under Review'),
+        ('RESOLVED', 'Resolved'),
+    ]
+
+    application = models.ForeignKey(Application, on_delete=models.CASCADE, related_name='issues')
+    agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True, related_name='issues')
+    user = models.ForeignKey(Users, on_delete=models.CASCADE, related_name='issues')
+    message = models.TextField()
+    required_documents = models.JSONField(default=list, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='WAITING_FOR_USER')
+    user_response = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Issue {self.id} for App {self.application.id} ({self.status})"
+

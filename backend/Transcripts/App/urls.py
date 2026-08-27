@@ -122,4 +122,7 @@ urlpatterns = [
     path("agent/<int:agent_id>/assignments/<int:assignment_id>/visit/photos/", views_agent.agent_upload_visit_photo, name="agent-upload-visit-photo"),
     # Phase 7: University Decision
     path("agent/<int:agent_id>/assignments/<int:assignment_id>/decision/", views_agent.agent_submit_university_decision, name="agent-submit-decision"),
+    path("application/<int:id>/issue/respond/", views.user_respond_issue, name="user-respond-issue"),
+    path("agent/<int:agent_id>/assignments/<int:assignment_id>/issue/resolve/", views_agent.agent_resolve_issue, name="agent-resolve-issue"),
 ]
+

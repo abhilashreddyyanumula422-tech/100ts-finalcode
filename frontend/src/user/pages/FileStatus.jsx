@@ -176,6 +176,76 @@ const FileStatus = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
+            {statusData.active_issue && (
+              <div className={`p-8 rounded-[2rem] border shadow-sm mb-6 ${
+                statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN'
+                  ? 'bg-red-50 border-red-200 text-red-900'
+                  : 'bg-amber-50 border-amber-200 text-amber-900'
+              }`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg">
+                    {statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN' ? '🔴' : '🟡'}
+                  </span>
+                  <h3 className={`text-base font-black uppercase tracking-widest ${
+                    statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN' ? 'text-red-800' : 'text-amber-800'
+                  }`}>
+                    {statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN' ? 'Action Required' : 'Waiting for Agent Review'}
+                  </h3>
+                </div>
+                
+                <p className="text-sm font-medium mb-4">
+                  {statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN'
+                    ? `Agent raised an issue: "${statusData.active_issue.message}"`
+                    : 'Your correction has been submitted and is waiting for agent review.'
+                  }
+                </p>
+
+                {statusData.active_issue.required_documents && statusData.active_issue.required_documents.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Your agent needs:</p>
+                    <ul className="list-disc pl-5 text-sm font-semibold text-slate-800 space-y-1">
+                      {statusData.active_issue.required_documents.map((doc, idx) => (
+                        <li key={idx}>{doc}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {(statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN') && (
+                  <button
+                    onClick={() => navigate("/apply")}
+                    className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm transition shadow-sm"
+                  >
+                    ✏️ Edit & Correct
+                  </button>
+                )}
+
+                {statusData.agent_details && (
+                  <div className="mt-4 flex gap-3 flex-wrap items-center pt-4 border-t border-dashed border-slate-200">
+                    <span className={`text-xs font-bold ${
+                      statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN' ? 'text-red-700' : 'text-amber-700'
+                    }`}>Direct Support:</span>
+                    
+                    <a
+                      href={`https://wa.me/${statusData.agent_details.mobile.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${statusData.agent_details.name}, regarding my application (ID: ${statusData.application_id}), I am updating the requested details.`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs transition shadow-sm"
+                    >
+                      💬 WhatsApp Agent
+                    </a>
+
+                    <a
+                      href={`mailto:${statusData.agent_details.email}?subject=Correction%20Update%20-%20ID%20${statusData.application_id}&body=Hi%20${statusData.agent_details.name},%20I%20have%20updated%20the%20details%20as%20requested.`}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs transition shadow-sm"
+                    >
+                      ✉️ Email Agent
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Summary Card */}
             <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 blur-3xl opacity-50" />

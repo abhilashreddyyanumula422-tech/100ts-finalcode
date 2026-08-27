@@ -208,6 +208,17 @@ def _campus_location(name):
 def assignment_to_dict(assignment):
     app = assignment.application
     agent = assignment.agent
+    from .models import Users, Issue
+    if assignment.status == "ADDITIONAL_DOC_REQUIRED" and not app.issues.exclude(status='RESOLVED').exists():
+        user = Users.objects.filter(email__iexact=app.email).first()
+        if user:
+            Issue.objects.create(
+                application=app,
+                agent=assignment.agent,
+                user=user,
+                message=app.admin_message or "Additional documents required.",
+                status='OPEN'
+            )
     first_degree = app.degrees.first()
     university = first_degree.university if first_degree else "N/A"
     from datetime import timedelta
@@ -263,6 +274,25 @@ def assignment_to_dict(assignment):
         "visit_record": _visit_to_dict(assignment) if hasattr(assignment, 'visit_record') else None,
         # Phase 7 decision record
         "decision_record": _decision_to_dict(assignment) if hasattr(assignment, 'decision_record') else None,
+        # Active Issue details
+        "active_issue": (
+            {
+                "id": app.issues.exclude(status='RESOLVED').first().id,
+                "message": app.issues.exclude(status='RESOLVED').first().message,
+                "status": app.issues.exclude(status='RESOLVED').first().status,
+                "user_response": app.issues.exclude(status='RESOLVED').first().user_response,
+                "required_documents": app.issues.exclude(status='RESOLVED').first().required_documents,
+                "created_at": app.issues.exclude(status='RESOLVED').first().created_at.isoformat(),
+                "updated_at": app.issues.exclude(status='RESOLVED').first().updated_at.isoformat(),
+                "documents": [
+                    {
+                        "id": doc.id,
+                        "name": doc.name,
+                        "url": doc.file.url if doc.file else ""
+                    } for doc in app.issues.exclude(status='RESOLVED').first().documents.all()
+                ]
+            } if app.issues.exclude(status='RESOLVED').exists() else None
+        ),
     }
 
 
@@ -749,10 +779,34 @@ def agent_update_status(request, agent_id, assignment_id):
                 app.rejection_reason = note
             app.save()
         elif new_status == "ADDITIONAL_DOC_REQUIRED":
-            app.status = "changes_requested"
+            from .models import Users, Issue, TrackingHistory
+            user = Users.objects.filter(email__iexact=app.email).first()
+            
+            req_docs = data.get("required_documents")
+            if isinstance(req_docs, str):
+                req_docs = [d.strip() for d in req_docs.split(",") if d.strip()]
+            if not isinstance(req_docs, list) or not req_docs:
+                req_docs = ["Additional Document"]
+
+            if user:
+                Issue.objects.filter(application=app, status__in=['OPEN', 'WAITING_FOR_USER', 'USER_RESPONDED', 'UNDER_REVIEW']).update(status='RESOLVED')
+                Issue.objects.create(
+                    application=app,
+                    agent=assignment.agent,
+                    user=user,
+                    message=note or "Additional documents required.",
+                    status='WAITING_FOR_USER',
+                    required_documents=req_docs
+                )
+            app.status = "WAITING_FOR_USER"
             if note:
                 app.admin_message = note
             app.save()
+            TrackingHistory.objects.create(
+                application=app,
+                status="WAITING_FOR_USER",
+                description=f"Additional Documents Required: {', '.join(req_docs)}"
+            )
         elif new_status == "APPROVED":
             app.status = "approved"
             app.save()
@@ -1156,8 +1210,32 @@ def agent_submit_university_decision(request, agent_id, assignment_id):
             if deadline_str:
                 d.deadline = deadline_str
             assignment.status = "ADDITIONAL_DOC_REQUIRED"
-            app.status = "rejected" # Usually translates to rejected or action_required in main app
-            # In a real system, notify student here
+            from .models import Users, Issue, TrackingHistory
+            user = Users.objects.filter(email__iexact=app.email).first()
+            
+            req_docs = [doc.strip() for doc in (d.required_documents or "").split(",") if doc.strip()]
+            if not req_docs:
+                req_docs = ["Additional Document"]
+
+            if user:
+                Issue.objects.filter(application=app, status__in=['OPEN', 'WAITING_FOR_USER', 'USER_RESPONDED', 'UNDER_REVIEW']).update(status='RESOLVED')
+                msg = d.required_documents or "Additional documents required."
+                if d.deadline:
+                    msg += f" (Deadline: {d.deadline})"
+                Issue.objects.create(
+                    application=app,
+                    agent=assignment.agent,
+                    user=user,
+                    message=msg,
+                    status='WAITING_FOR_USER',
+                    required_documents=req_docs
+                )
+            app.status = "WAITING_FOR_USER"
+            TrackingHistory.objects.create(
+                application=app,
+                status="WAITING_FOR_USER",
+                description=f"Additional Documents Required: {', '.join(req_docs)}"
+            )
 
         elif decision_type == "APPROVED":
             d.university_reference_number = request.POST.get("university_reference_number")
@@ -1333,3 +1411,46 @@ def agent_dashboard(request, agent_id):
         "deliveries": deliveries,
         "recent_activity": recent_activity,
     })
+
+
+@csrf_exempt
+@agent_required
+def agent_resolve_issue(request, agent_id, assignment_id):
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    try:
+        from .models import Issue
+        assignment = AgentAssignment.objects.get(id=assignment_id, agent_id=agent_id)
+        app = assignment.application
+
+        # Mark active issues as RESOLVED
+        issues = app.issues.exclude(status='RESOLVED')
+        for issue in issues:
+            issue.status = 'RESOLVED'
+            issue.save()
+
+        app.status = "approved"
+        app.save()
+
+        # Move assignment back to SUBMITTED_TO_UNIVERSITY
+        if assignment.status == "ADDITIONAL_DOC_REQUIRED":
+            assignment.status = "SUBMITTED_TO_UNIVERSITY"
+            assignment.save()
+
+        from .models import TrackingHistory
+        TrackingHistory.objects.create(
+            application=app,
+            status="RESOLVED",
+            description="Agent marked issue as resolved. Request processing resumed."
+        )
+
+        log_activity(app, "RESOLVED", "Issue marked as resolved by agent.")
+        return JsonResponse({
+            "message": "Issue marked as resolved successfully",
+            "new_status": assignment.status
+        })
+    except AgentAssignment.DoesNotExist:
+        return JsonResponse({"error": "Assignment not found or access denied"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+

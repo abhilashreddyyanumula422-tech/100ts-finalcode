@@ -26,6 +26,7 @@ const Logout = lazy(() => import("../user/pages/Logout"));
 const Sign = lazy(() => import("../user/pages/sign"));
 const ForgotPassword = lazy(() => import("../user/pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("../user/pages/ResetPassword"));
+const PaymentStatus = lazy(() => import("../user/pages/PaymentStatus"));
 
 const Transcripts = lazy(() => import("../user/pages/Transcripts"));
 const ProvisionalCertificate = lazy(() => import("../user/pages/provisionalCertificate"));
@@ -98,6 +99,7 @@ const AppRoutes = () => {
           <Route path="signin" element={<Sign />} />
           <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="reset-password" element={<ResetPassword />} />
+          <Route path="payment/status" element={<PaymentStatus />} />
 
           {/* Certificate Service Routes */}
           <Route path="services/transcripts" element={<Transcripts />} />

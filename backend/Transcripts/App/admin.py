@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Users, Admin, College, Application, Degree, Document, Certificate, Payment, PasswordResetToken
+from .models import Users, Admin, College, Application, Degree, Document, Certificate, Payment, PasswordResetToken, Issue
 
 @admin.register(Users)
 class UsersAdmin(admin.ModelAdmin):
@@ -44,3 +44,10 @@ class PasswordResetTokenAdmin(admin.ModelAdmin):
     list_display = ['token', 'user', 'admin', 'is_used', 'created_at', 'expires_at']
     list_filter = ['is_used', 'created_at']
     search_fields = ['token']
+
+@admin.register(Issue)
+class IssueAdmin(admin.ModelAdmin):
+    list_display = ['application', 'agent', 'user', 'status', 'created_at', 'updated_at']
+    list_filter = ['status', 'created_at']
+    search_fields = ['application__fullName', 'agent__name', 'user__name', 'message']
+

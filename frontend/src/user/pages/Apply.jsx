@@ -1360,12 +1360,22 @@ const UpBlock = ({ type, label, options, upProg, upNames, upCompressed, onFile, 
 /* ─────────────────────────────────────────
    STEP COMPONENTS
 ───────────────────────────────────────── */
-const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, upNames, upCompressed, onFile, delFile, onDigiLocker, onSubmit, adminMessage }) => {
+const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, upNames, upCompressed, onFile, delFile, onDigiLocker, onSubmit, adminMessage, isEditingCorrection, activeIssue }) => {
   const [showManualUpload, setShowManualUpload] = React.useState(false);
 
   return (
     <form onSubmit={onSubmit}>
-      {adminMessage && (
+      {isEditingCorrection && activeIssue && (
+        <div className="info-panel red" style={{ marginBottom: 24, border: "2px solid #ef4444", backgroundColor: "#fef2f2" }}>
+          <span className="info-icon">🔴</span>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ color: "#991b1b", marginBottom: 4 }}>Correcting details as requested by Agent</h3>
+            <p style={{ color: "#7f1d1d", fontSize: "14px", fontWeight: 700 }}>Requested correction: "{activeIssue.message}"</p>
+          </div>
+        </div>
+      )}
+
+      {adminMessage && !isEditingCorrection && (
         <div className="info-panel amber" style={{ marginBottom: 24, border: "2px solid #fbbf24" }}>
           <span className="info-icon">⚠️</span>
           <div style={{ flex: 1 }}>
@@ -1556,7 +1566,9 @@ const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, 
         </label>
       </div>
       <div className="actions">
-        <button type="submit" className="btn-primary">Proceed to Payment &nbsp;→</button>
+        <button type="submit" className="btn-primary">
+          {isEditingCorrection ? "Submit Correction &nbsp;✓" : "Proceed to Payment &nbsp;→"}
+        </button>
       </div>
     </form>
   );
@@ -2022,6 +2034,14 @@ export default function Apply() {
   const [paidAmount, setPaidAmount] = useState(0);
   const [paymentStatus, setPaymentStatus] = useState("Pending");
   const [errors, setErrors] = useState({});
+  
+  const [activeIssue, setActiveIssue] = useState(null);
+  const [isEditingCorrection, setIsEditingCorrection] = useState(false);
+  const [rawAppData, setRawAppData] = useState(null);
+  
+  const [userMsg, setUserMsg] = useState("");
+  const [uploadedFiles, setUploadedFiles] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState(() => {
     const user = JSON.parse(localStorage.getItem("user"));
@@ -2078,6 +2098,87 @@ export default function Apply() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
+  const handleEditCorrection = (appData) => {
+    if (!appData) return;
+    setForm({
+      fullName: appData.fullName || "",
+      email: appData.email || "",
+      phone: appData.phone || "",
+      altPhone: appData.altPhone || "",
+      requirement: appData.requirement || "",
+      referenceNumber: appData.referenceNumber || "",
+      termsAccepted: true,
+      specialCondition: true
+    });
+    if (appData.degrees && appData.degrees.length > 0) {
+      setDegrees(appData.degrees.map((d, i) => ({
+        id: d.id || i + 1,
+        type: d.type || "",
+        university: d.university || "",
+        course: d.course || "",
+        college: d.college || ""
+      })));
+    }
+    setIsEditingCorrection(true);
+    goStep(0);
+  };
+
+  const handleUserSubmitIssueResponse = async (e) => {
+    e.preventDefault();
+    
+    const missingDocs = activeIssue?.required_documents?.filter(doc => !uploadedFiles[doc]);
+    if (missingDocs && missingDocs.length > 0) {
+      alert(`Please upload files for: ${missingDocs.join(", ")}`);
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("user_message", userMsg);
+      Object.keys(uploadedFiles).forEach(docName => {
+        formData.append(docName, uploadedFiles[docName]);
+      });
+
+      const res = await fetch(`${API_BASE}/api/application/${applicationId}/issue/respond/`, {
+        method: "POST",
+        body: formData
+      });
+
+      if (res.ok) {
+        alert("Correction submitted successfully!");
+        setUserMsg("");
+        setUploadedFiles({});
+        
+        const statusRes = await fetch(`${API_BASE}/api/application/${applicationId}/status/`);
+        const statusData = await statusRes.json();
+        if (statusData.status) {
+          setAppStatus(statusData.status);
+          setAdminMessage(statusData.admin_message || "");
+          setRejectionReason(statusData.rejection_reason || "");
+          setActiveIssue(statusData.active_issue || null);
+          setRawAppData(statusData);
+          
+          if (statusData.status === "approved") {
+            if (statusData.payment_status === "Paid" || statusData.payment_status === "Fully Paid") goStep(3);
+            else goStep(2);
+          } else if (statusData.status === "pending_approval" || statusData.status === "pending") {
+            goStep(1);
+          } else {
+            goStep(1);
+          }
+        }
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to submit correction.");
+      }
+    } catch (error) {
+      alert("Submission error: " + error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // 🔄 Restore state on refresh
   useEffect(() => {
     const restoreState = async () => {
@@ -2103,6 +2204,8 @@ export default function Apply() {
             setAppStatus(data.status);
             setAdminMessage(data.admin_message || "");
             setRejectionReason(data.rejection_reason || "");
+            setRawAppData(data);
+            setActiveIssue(data.active_issue || null);
             if (data.service_fee) {
               setServiceFee(data.service_fee);
             }
@@ -2145,10 +2248,10 @@ export default function Apply() {
     restoreState();
   }, [goStep, API_BASE]);
 
-  // 🔄 Status Polling while in Waiting Screen (activeStep 1)
+  // 🔄 Status Polling while in Waiting Screen or having an active issue
   useEffect(() => {
     let interval;
-    if (activeStep === 1 && applicationId) {
+    if (applicationId && !isEditingCorrection) {
       const checkStatus = async () => {
         try {
           const res = await fetch(`${API_BASE}/api/application/${applicationId}/status/`);
@@ -2166,16 +2269,22 @@ export default function Apply() {
               setPaidAmount(Number(data.paid_amount));
             }
             if (data.payment_status) setPaymentStatus(data.payment_status);
+            setRawAppData(data);
+            setActiveIssue(data.active_issue || null);
             
-            if (data.status === "approved") {
-              if (data.payment_status === "Fully Paid" || data.payment_status === "Paid") goStep(3);
-              else goStep(2);
-            } else if (data.status === "rejected" || data.status === "changes_requested") {
-            } else if (String(data.status || "").toLowerCase() === "completed" || ["DELIVERED", "COMPLETED"].includes(String(data.agent_status || "").toUpperCase()) || data.status === "delivered") {
-              if (!data.user_acknowledged) {
-                setShowAckModal(true);
-              } else {
-                goStep(4);
+            // Re-route dynamically on status updates ONLY if the active issue status changes or is not open/user_responded
+            if (!data.active_issue || data.active_issue.status === 'RESOLVED') {
+              if (data.status === "approved") {
+                if (data.payment_status === "Fully Paid" || data.payment_status === "Paid") goStep(3);
+                else goStep(2);
+              } else if (data.status === "rejected" || data.status === "changes_requested") {
+                goStep(1);
+              } else if (String(data.status || "").toLowerCase() === "completed" || ["DELIVERED", "COMPLETED"].includes(String(data.agent_status || "").toUpperCase()) || data.status === "delivered") {
+                if (!data.user_acknowledged) {
+                  setShowAckModal(true);
+                } else {
+                  goStep(4);
+                }
               }
             }
           }
@@ -2187,7 +2296,7 @@ export default function Apply() {
       interval = setInterval(checkStatus, 5000);
     }
     return () => clearInterval(interval);
-  }, [activeStep, applicationId, API_BASE, goStep]);
+  }, [applicationId, isEditingCorrection, API_BASE, goStep]);
 
   const onChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
@@ -2318,6 +2427,41 @@ export default function Apply() {
         const fileData = upCompressed[type];
         if (fileData?.file) formData.append(type, fileData.file);
       });
+
+      if (isEditingCorrection) {
+        const res = await fetch(`${API_BASE}/api/application/${applicationId}/issue/respond/`, {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert("Correction submitted successfully.");
+          setIsEditingCorrection(false);
+          
+          const statusRes = await fetch(`${API_BASE}/api/application/${applicationId}/status/`);
+          const statusData = await statusRes.json();
+          if (statusData.status) {
+            setAppStatus(statusData.status);
+            setAdminMessage(statusData.admin_message || "");
+            setRejectionReason(statusData.rejection_reason || "");
+            setActiveIssue(statusData.active_issue || null);
+            setRawAppData(statusData);
+            
+            if (statusData.status === "approved") {
+              if (statusData.payment_status === "Paid" || statusData.payment_status === "Fully Paid") goStep(3);
+              else goStep(2);
+            } else if (statusData.status === "pending_approval" || statusData.status === "pending") {
+              goStep(1);
+            } else {
+              goStep(1);
+            }
+          }
+        } else {
+          alert(data.error || "Submission failed");
+        }
+        return;
+      }
 
       const res = await fetch(`${API_BASE}/api/submit/`, {
         method: "POST",
@@ -2482,6 +2626,233 @@ export default function Apply() {
           <HorizontalRoadmap activeStep={activeStep} />
           <NumberedRoadmap activeStep={activeStep} />
 
+          {activeIssue && (
+            <div style={{
+              backgroundColor: activeIssue.status === 'WAITING_FOR_USER' || activeIssue.status === 'OPEN' ? '#fee2e2' : '#fef3c7',
+              border: activeIssue.status === 'WAITING_FOR_USER' || activeIssue.status === 'OPEN' ? '2px solid #ef4444' : '2px solid #f59e0b',
+              borderRadius: '24px',
+              padding: '28px',
+              marginBottom: '24px',
+              boxShadow: activeIssue.status === 'WAITING_FOR_USER' || activeIssue.status === 'OPEN'
+                ? '0 10px 15px -3px rgba(220, 38, 38, 0.1), 0 4px 6px -4px rgba(220, 38, 38, 0.1)'
+                : '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+            }}>
+              {(activeIssue.status === 'WAITING_FOR_USER' || activeIssue.status === 'OPEN') ? (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                    <span style={{ fontSize: '24px' }}>🔴</span>
+                    <h3 style={{
+                      fontWeight: 900,
+                      fontSize: '18px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.075em',
+                      color: '#991b1b',
+                      margin: 0
+                    }}>
+                      ACTION REQUIRED
+                    </h3>
+                  </div>
+
+                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#7f1d1d', marginBottom: '8px' }}>
+                    Additional Documents Required
+                  </div>
+
+                  {activeIssue.required_documents && activeIssue.required_documents.length > 0 && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#991b1b', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+                        Your agent needs:
+                      </span>
+                      <ul style={{ listStyleType: 'disc', paddingLeft: '20px', fontSize: '14px', color: '#7f1d1d', fontWeight: 600 }}>
+                        {activeIssue.required_documents.map((doc, idx) => (
+                          <li key={idx} style={{ marginBottom: '4px' }}>{doc}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div style={{
+                    backgroundColor: '#ffffff',
+                    borderLeft: '4px solid #dc2626',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    marginBottom: '20px',
+                    fontSize: '13px',
+                    color: '#4b5563',
+                    fontWeight: 500
+                  }}>
+                    <strong style={{ color: '#1f2937' }}>Agent message:</strong> "{activeIssue.message}"
+                  </div>
+
+                  {/* Upload Correction Form */}
+                  <form onSubmit={handleUserSubmitIssueResponse} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      {activeIssue.required_documents?.map((docName, idx) => (
+                        <div key={idx} style={{ marginBottom: '12px' }}>
+                          <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '4px' }}>
+                            Upload file for: {docName} <span style={{ color: '#dc2626' }}>*</span>
+                          </label>
+                          <input
+                            type="file"
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              if (file) {
+                                setUploadedFiles(prev => ({ ...prev, [docName]: file }));
+                              }
+                            }}
+                            required
+                            style={{
+                              fontSize: '13px',
+                              color: '#4b5563',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '8px',
+                              padding: '8px 12px',
+                              width: '100%',
+                              backgroundColor: '#f9fafb'
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>
+                        Message to Agent
+                      </label>
+                      <textarea
+                        value={userMsg}
+                        onChange={(e) => setUserMsg(e.target.value)}
+                        placeholder="Provide details or comments to your agent..."
+                        rows={3}
+                        style={{
+                          width: '100%',
+                          borderRadius: '12px',
+                          border: '1px solid #d1d5db',
+                          padding: '10px 14px',
+                          fontSize: '13px',
+                          resize: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        style={{
+                          backgroundColor: '#dc2626',
+                          color: '#ffffff',
+                          padding: '12px 24px',
+                          fontSize: '14px',
+                          fontWeight: 800,
+                          borderRadius: '12px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 6px -1px rgba(220, 38, 38, 0.2)'
+                        }}
+                      >
+                        {submitting ? 'Submitting...' : '🚀 Submit to Agent'}
+                      </button>
+                      
+                      {rawAppData?.agent_details && (
+                        <a
+                          href={`https://wa.me/${rawAppData.agent_details.mobile.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${rawAppData.agent_details.name}, regarding my application (ID: ${applicationId || rawAppData.application_id}), I am updating the requested details.`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            backgroundColor: '#22c55e',
+                            color: '#ffffff',
+                            padding: '12px 20px',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            borderRadius: '12px',
+                            textDecoration: 'none',
+                            boxShadow: '0 4px 6px -1px rgba(34, 197, 94, 0.2)'
+                          }}
+                        >
+                          💬 WhatsApp Agent
+                        </a>
+                      )}
+                    </div>
+                  </form>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '20px' }}>🟡</span>
+                    <h3 style={{
+                      fontWeight: 900,
+                      fontSize: '16px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      color: '#b45309',
+                      margin: 0
+                    }}>
+                      Waiting for Agent Review
+                    </h3>
+                  </div>
+                  <p style={{ fontSize: '14px', color: '#78350f', fontWeight: 600, marginBottom: '16px' }}>
+                    Your correction has been submitted and is waiting for agent review.
+                  </p>
+                  
+                  {rawAppData?.agent_details && (
+                    <div style={{
+                      display: 'flex',
+                      gap: '12px',
+                      flexWrap: 'wrap',
+                      alignItems: 'center',
+                      borderTop: '1px dashed rgba(0, 0, 0, 0.1)',
+                      paddingTop: '16px'
+                    }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#78350f' }}>Direct Support:</span>
+                      
+                      <a
+                        href={`https://wa.me/${rawAppData.agent_details.mobile.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${rawAppData.agent_details.name}, regarding my application (ID: ${applicationId || rawAppData.application_id}), I have updated the requested details.`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          backgroundColor: '#22c55e',
+                          color: '#ffffff',
+                          padding: '8px 14px',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          borderRadius: '8px',
+                          textDecoration: 'none'
+                        }}
+                      >
+                        💬 WhatsApp Agent
+                      </a>
+
+                      <a
+                        href={`mailto:${rawAppData.agent_details.email}?subject=Correction%20Update%20-%20ID%20${applicationId || rawAppData.application_id}&body=Hi%20${rawAppData.agent_details.name},%20I%20have%20updated%20the%20details%20as%20requested.`}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          backgroundColor: '#3b82f6',
+                          color: '#ffffff',
+                          padding: '8px 14px',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          borderRadius: '8px',
+                          textDecoration: 'none'
+                        }}
+                      >
+                        ✉️ Email Agent
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="main-card card-anim" key={animKey}>
             <AnimatePresence mode="wait">
               <motion.div
@@ -2499,6 +2870,8 @@ export default function Apply() {
                     onDigiLocker={openDigiLocker}
                     onSubmit={onSubmit}
                     adminMessage={adminMessage}
+                    isEditingCorrection={isEditingCorrection}
+                    activeIssue={activeIssue}
                   />
                 )}
                 {activeStep === 1 && (

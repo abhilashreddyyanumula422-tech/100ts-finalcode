@@ -584,8 +584,26 @@ export const acceptAssignment = (agentId, assignmentId) =>
   agentPost(`/api/agent/${agentId}/assignments/${assignmentId}/accept/`, {});
 export const rejectAssignment = (agentId, assignmentId, reason) =>
   agentPost(`/api/agent/${agentId}/assignments/${assignmentId}/reject/`, { reason });
-export const updateAssignmentStatus = (agentId, assignmentId, status, note) =>
-  agentPost(`/api/agent/${agentId}/assignments/${assignmentId}/update-status/`, { status, note });
+export const updateAssignmentStatus = (agentId, assignmentId, status, note, required_documents) =>
+  agentPost(`/api/agent/${agentId}/assignments/${assignmentId}/update-status/`, { status, note, required_documents });
+
+export const respondToIssue = async (applicationId, formData) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/application/${applicationId}/issue/respond/`, {
+      method: "POST",
+      body: formData
+    });
+    const data = await response.json();
+    return { ok: response.ok, data, status: response.status };
+  } catch (error) {
+    console.error("Respond to Issue Error:", error);
+    throw error;
+  }
+};
+
+export const resolveIssue = (agentId, assignmentId) =>
+  agentPost(`/api/agent/${agentId}/assignments/${assignmentId}/issue/resolve/`, {});
+
 
 export const uploadCollectedDocument = (agentId, assignmentId, file) => {
   const formData = new FormData();
@@ -669,6 +687,8 @@ export default {
   acceptAssignment,
   rejectAssignment,
   updateAssignmentStatus,
+  respondToIssue,
+  resolveIssue,
   uploadCollectedDocument,
   addLogistics,
   saveVisitDetails,
