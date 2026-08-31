@@ -1878,6 +1878,10 @@ def user_respond_issue(request, id):
 
             # Save files specifically for this issue and link them!
             for key, file in request.FILES.items():
+                # Delete existing document of the same type for this application
+                # to prevent duplicates and ensure we keep the latest.
+                Document.objects.filter(application=app, doc_type=key).delete()
+
                 doc = Document.objects.create(
                     application=app,
                     doc_type=key,

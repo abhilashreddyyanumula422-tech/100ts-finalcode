@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Activity, RefreshCw, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { Activity, RefreshCw, Search, ChevronDown, ChevronUp, MessageSquare } from "lucide-react";
 import { getAllAssignments } from "../../services/api";
 
 const STATUS_CONFIG = {
@@ -133,6 +133,14 @@ function AssignmentRow({ assignment }) {
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase mb-1">Completed At</p>
                   <p className="text-sm text-slate-700">{new Date(assignment.completed_at).toLocaleString()}</p>
+                </div>
+              )}
+              {assignment.agent && (
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase mb-1">Actions</p>
+                  <a href={`/admin/agent-support/${assignment.application_id}`} className="inline-flex items-center gap-1 text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-3 rounded-lg transition-colors">
+                    <MessageSquare size={14} /> Open Chat
+                  </a>
                 </div>
               )}
               {assignment.agent_rejection_reason && (

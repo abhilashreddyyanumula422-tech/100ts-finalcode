@@ -97,6 +97,8 @@ urlpatterns = [
     path("admin/agents/", views_agent.admin_agents_list, name="admin-agents-list"),
     path("admin/agents/<int:agent_id>/", views_agent.admin_agent_detail, name="admin-agent-detail"),
     path("admin/agents/<int:agent_id>/toggle/", views_agent.admin_agent_toggle, name="admin-agent-toggle"),
+    path("admin/applications/<int:app_id>/messages/", views_agent.admin_agent_messages, name="admin-agent-messages"),
+    path("admin/agent-support/unread-count/", views_agent.admin_unread_messages_count, name="admin-unread-count"),
 
     # Admin — Assignment
     path("admin/applications/<int:app_id>/eligible-agents/", views_agent.admin_eligible_agents, name="admin-eligible-agents"),
@@ -107,6 +109,8 @@ urlpatterns = [
 
     # Agent — Work Dashboard (stats, today's tasks, visits, delivery, activity)
     path("agent/<int:agent_id>/dashboard/", views_agent.agent_dashboard, name="agent-dashboard"),
+    path("agent/<int:agent_id>/admin-messages/<int:app_id>/", views_agent.agent_admin_messages, name="agent-admin-messages"),
+    path("agent/<int:agent_id>/admin-messages/unread-count/", views_agent.agent_unread_messages_count, name="agent-unread-count"),
 
     # Agent — Their Assignments
     path("agent/<int:agent_id>/assignments/", views_agent.agent_my_assignments, name="agent-my-assignments"),

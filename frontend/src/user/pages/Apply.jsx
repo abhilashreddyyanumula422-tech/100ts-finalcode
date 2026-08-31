@@ -1291,12 +1291,14 @@ const TlItem = ({ icon, bg, title, desc, badge, last }) => (
 /* ─────────────────────────────────────────
    UPLOAD BLOCK
 ───────────────────────────────────────── */
-const UpBlock = ({ type, label, options, upProg, upNames, upCompressed, onFile, onDelFile, onDigiLocker, flowType }) => {
+const UpBlock = ({ type, label, options, upProg, upNames, upCompressed, onFile, onDelFile, onDigiLocker, flowType, existingDocs }) => {
   const fileInputRef = useRef(null);
   const prog = upProg[type];
   const nm = upNames[type];
   const comprInfo = upCompressed[type];
   const isDigiFlow = flowType === 'digilocker';
+  const existingDoc = existingDocs ? existingDocs[type] : null;
+  const isReplaced = !!nm; // user selected a new file
 
   return (
     <div className={`upload-box ${isDigiFlow ? 'digi-mode' : ''}`} style={isDigiFlow ? { borderStyle: 'solid', borderColor: '#e0e7ff', background: '#f5f7ff' } : {}}>
@@ -1325,7 +1327,15 @@ const UpBlock = ({ type, label, options, upProg, upNames, upCompressed, onFile, 
         </div>
       )}
 
-      {nm && <div className="file-nm" style={isDigiFlow ? { color: '#4f46e5', fontWeight: 600 } : {}}>📄 {nm}</div>}
+      {/* Show newly uploaded file if any */}
+      {nm && <div className="file-nm" style={isDigiFlow ? { color: '#4f46e5', fontWeight: 600 } : {}}>📄 New: {nm}</div>}
+
+      {/* Show existing file if no new file has been uploaded to replace it */}
+      {!nm && existingDoc && (
+        <div className="file-nm" style={{ color: '#059669', fontWeight: 600 }}>
+          📄 Existing: {existingDoc.name || 'Previously uploaded document'}
+        </div>
+      )}
 
       {comprInfo && comprInfo.compressed && !isDigiFlow && (
         <div className="file-compressed">
@@ -1340,10 +1350,10 @@ const UpBlock = ({ type, label, options, upProg, upNames, upCompressed, onFile, 
             type="button"
             onClick={() => fileInputRef.current?.click()}
           >
-            Attach
+            {existingDoc && !nm ? "Replace File" : "Attach"}
           </button>
         )}
-        {nm && <button className="btn-del" type="button" onClick={() => onDelFile(type)}>Delete</button>}
+        {nm && <button className="btn-del" type="button" onClick={() => onDelFile(type)}>Remove Selected</button>}
         {onDigiLocker && (
           <button className="btn-digilocker" type="button" onClick={() => onDigiLocker(type, label)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1360,7 +1370,7 @@ const UpBlock = ({ type, label, options, upProg, upNames, upCompressed, onFile, 
 /* ─────────────────────────────────────────
    STEP COMPONENTS
 ───────────────────────────────────────── */
-const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, upNames, upCompressed, onFile, delFile, onDigiLocker, onSubmit, adminMessage, isEditingCorrection, activeIssue }) => {
+const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, upNames, upCompressed, onFile, delFile, onDigiLocker, onSubmit, adminMessage, isEditingCorrection, activeIssue, existingDocs }) => {
   const [showManualUpload, setShowManualUpload] = React.useState(false);
 
   return (
@@ -1525,17 +1535,17 @@ const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, 
             <UpBlock type="cmm" label="CMM / Yearly Marks Sheet"
               options={["CMM", "Semester 1", "Semester 2", "Semester 3", "Semester 4", "Semester 5", "Semester 6", "Semester 7", "Semester 8"]}
               upProg={upProg} upNames={upNames} upCompressed={upCompressed}
-              onFile={onFile} delFile={delFile} flowType="manual" />
+              onFile={onFile} delFile={delFile} flowType="manual" existingDocs={existingDocs} />
 
             <UpBlock type="degree" label="Degree / Provisional Certificate"
               options={["Degree Certificate", "Provisional Certificate"]}
               upProg={upProg} upNames={upNames} upCompressed={upCompressed}
-              onFile={onFile} delFile={delFile} flowType="manual" />
+              onFile={onFile} delFile={delFile} flowType="manual" existingDocs={existingDocs} />
 
             <UpBlock type="internship" label="Internship Certificate"
               options={["Internship Certificate"]}
               upProg={upProg} upNames={upNames} upCompressed={upCompressed}
-              onFile={onFile} delFile={delFile} flowType="manual" />
+              onFile={onFile} delFile={delFile} flowType="manual" existingDocs={existingDocs} />
           </div>
         </div>
       )}
@@ -2038,6 +2048,7 @@ export default function Apply() {
   const [upProg, setUpProg] = useState({ cmm: 0, degree: 0, internship: 0 });
   const [upNames, setUpNames] = useState({ cmm: null, degree: null, internship: null });
   const [upCompressed, setUpCompressed] = useState({ cmm: null, degree: null, internship: null });
+  const [existingDocs, setExistingDocs] = useState({});
   const [degrees, setDegrees] = useState([{ id: 1, type: "", university: "", course: "", college: "" }]);
 
   const [digiModal, setDigiModal] = useState({ open: false, type: null, label: "" });
@@ -2059,6 +2070,21 @@ export default function Apply() {
       hasAppliedUniversityRef.current = true;
     }
   }, [location.state]);
+
+  // ✅ Handle incoming Edit requests from FileStatus
+  useEffect(() => {
+    if (location.state?.editApplication && location.state?.appData && !isEditingCorrection) {
+      const data = location.state.appData;
+      setApplicationId(data.application_id || data.id);
+      setAppStatus(data.status || "pending_approval");
+      setAdminMessage(data.admin_message || "");
+      setRejectionReason(data.rejection_reason || "");
+      setActiveIssue(data.active_issue || null);
+      setRawAppData(data);
+      if (data.service_fee) setServiceFee(data.service_fee);
+      handleEditCorrection(data);
+    }
+  }, [location.state, isEditingCorrection]);
 
   useEffect(() => {
     if (!document.getElementById("apply-css")) {
@@ -2096,6 +2122,18 @@ export default function Apply() {
         college: d.college || ""
       })));
     }
+    
+    // Map existing documents
+    if (appData.documents && appData.documents.length > 0) {
+      const docs = {};
+      appData.documents.forEach(d => {
+        if (d.doc_type) docs[d.doc_type] = d;
+      });
+      setExistingDocs(docs);
+    } else {
+      setExistingDocs({});
+    }
+
     setIsEditingCorrection(true);
     goStep(0);
   };
@@ -2406,12 +2444,43 @@ export default function Apply() {
       });
 
       if (isEditingCorrection) {
-        const res = await fetch(`${API_BASE}/api/application/${applicationId}/issue/respond/`, {
+        let currentAppId = applicationId;
+        if (!currentAppId && location.state?.appData) {
+          currentAppId = location.state.appData.application_id || location.state.appData.id;
+        }
+        if (!currentAppId) {
+          currentAppId = localStorage.getItem("applicationId");
+        }
+
+        if (!currentAppId) {
+          alert("Error: Application ID is missing. Please return to the Tracking page and try again.");
+          return;
+        }
+
+        const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+        const currentToken = currentUser?.token;
+        const headers = new Headers();
+        headers.append("Accept", "application/json");
+        if (currentToken) {
+          headers.append("Authorization", `Token ${currentToken}`);
+        }
+
+        const res = await fetch(`${API_BASE}/api/application/${currentAppId}/issue/respond/`, {
           method: "POST",
+          headers: headers,
           body: formData,
         });
 
-        const data = await res.json();
+        const textResponse = await res.text();
+        let data;
+        try {
+          data = JSON.parse(textResponse);
+        } catch (err) {
+          console.error("Server returned non-JSON response:", textResponse);
+          alert("Server error: Received an invalid response from the server. Please check your connection or contact support.");
+          return;
+        }
+
         if (res.ok) {
           if (data.token && data.user) {
             localStorage.setItem("user", JSON.stringify({ ...data.user, token: data.token }));
@@ -2447,6 +2516,7 @@ export default function Apply() {
       const currentToken = currentUser?.token;
 
       const headers = new Headers();
+      headers.append("Accept", "application/json");
       if (currentToken) {
         headers.append("Authorization", `Token ${currentToken}`);
       }
@@ -2457,7 +2527,16 @@ export default function Apply() {
         body: formData,
       });
 
-      const data = await res.json();
+      const textResponse = await res.text();
+      let data;
+      try {
+        data = JSON.parse(textResponse);
+      } catch (err) {
+        console.error("Server returned non-JSON response:", textResponse);
+        alert("Server error: Received an invalid response from the server. Please check your connection or contact support.");
+        return;
+      }
+
       if (res.ok) {
         if (data.token && data.user) {
           localStorage.setItem("user", JSON.stringify({ 
@@ -2590,6 +2669,10 @@ export default function Apply() {
     setAdminMessage("");
     setRejectionReason("");
     setFlowType(null);
+    setActiveIssue(null);
+    setIsEditingCorrection(false);
+    setRawAppData(null);
+    setExistingDocs({});
     localStorage.removeItem("applicationId");
     localStorage.removeItem("flowType");
     goStep(0);
@@ -2612,11 +2695,38 @@ export default function Apply() {
   };
 
   const fillPct = Math.round(((activeStep + 1) / (PROC.length)) * 100);
+  const [trackInputId, setTrackInputId] = useState("");
 
   return (
     <div className="app-shell">
       <div className="portal-panel">
         <div className="portal-wrap">
+          {/* Tracking Bar at the Top */}
+          <div style={{ marginBottom: '40px', marginTop: '10px' }}>
+            <div className="hero-header" style={{ marginBottom: '20px' }}>
+              <h1 style={{ fontSize: '28px' }}>Track Your <em>Application</em></h1>
+            </div>
+            <form 
+              className="track-bar" 
+              onSubmit={(e) => {
+                e.preventDefault();
+                if(trackInputId.trim()) navigate("/file-status", { state: { trackingId: trackInputId } });
+              }}
+            >
+              <input
+                type="text"
+                placeholder="Enter Application ID (e.g. 100T-00123)"
+                className="track-input"
+                value={trackInputId}
+                onChange={(e) => setTrackInputId(e.target.value)}
+                autoFocus={location.state?.showTrackingInput}
+              />
+              <button className="track-btn" type="submit" disabled={!trackInputId.trim()}>
+                Track Status
+              </button>
+            </form>
+          </div>
+
           <HorizontalRoadmap activeStep={activeStep} />
           <NumberedRoadmap activeStep={activeStep} />
 
@@ -2677,101 +2787,10 @@ export default function Apply() {
                     <strong style={{ color: '#1f2937' }}>Agent message:</strong> "{activeIssue.message}"
                   </div>
 
-                  {/* Upload Correction Form */}
-                  <form onSubmit={handleUserSubmitIssueResponse} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div>
-                      {activeIssue.required_documents?.map((docName, idx) => (
-                        <div key={idx} style={{ marginBottom: '12px' }}>
-                          <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '4px' }}>
-                            Upload file for: {docName} <span style={{ color: '#dc2626' }}>*</span>
-                          </label>
-                          <input
-                            type="file"
-                            onChange={(e) => {
-                              const file = e.target.files[0];
-                              if (file) {
-                                setUploadedFiles(prev => ({ ...prev, [docName]: file }));
-                              }
-                            }}
-                            required
-                            style={{
-                              fontSize: '13px',
-                              color: '#4b5563',
-                              border: '1px solid #d1d5db',
-                              borderRadius: '8px',
-                              padding: '8px 12px',
-                              width: '100%',
-                              backgroundColor: '#f9fafb'
-                            }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>
-                        Message to Agent
-                      </label>
-                      <textarea
-                        value={userMsg}
-                        onChange={(e) => setUserMsg(e.target.value)}
-                        placeholder="Provide details or comments to your agent..."
-                        rows={3}
-                        style={{
-                          width: '100%',
-                          borderRadius: '12px',
-                          border: '1px solid #d1d5db',
-                          padding: '10px 14px',
-                          fontSize: '13px',
-                          resize: 'none',
-                          boxSizing: 'border-box'
-                        }}
-                      />
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-                      <button
-                        type="submit"
-                        disabled={submitting}
-                        style={{
-                          backgroundColor: '#dc2626',
-                          color: '#ffffff',
-                          padding: '12px 24px',
-                          fontSize: '14px',
-                          fontWeight: 800,
-                          borderRadius: '12px',
-                          border: 'none',
-                          cursor: 'pointer',
-                          boxShadow: '0 4px 6px -1px rgba(220, 38, 38, 0.2)'
-                        }}
-                      >
-                        {submitting ? 'Submitting...' : '🚀 Submit to Agent'}
-                      </button>
-                      
-                      {rawAppData?.agent_details && (
-                        <a
-                          href={`https://wa.me/${rawAppData.agent_details.mobile.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${rawAppData.agent_details.name}, regarding my application (ID: ${applicationId || rawAppData.application_id}), I am updating the requested details.`)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            backgroundColor: '#22c55e',
-                            color: '#ffffff',
-                            padding: '12px 20px',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            borderRadius: '12px',
-                            textDecoration: 'none',
-                            boxShadow: '0 4px 6px -1px rgba(34, 197, 94, 0.2)'
-                          }}
-                        >
-                          💬 WhatsApp Agent
-                        </a>
-                      )}
-                    </div>
-                  </form>
+                  {/* Provide a clear instruction to the user */}
+                  <div style={{ marginTop: '16px', fontSize: '15px', color: '#7f1d1d', fontWeight: 600 }}>
+                    Please scroll down to update your application details and replace any requested documents, then click "Submit Correction" at the bottom of the page.
+                  </div>
                 </div>
               ) : (
                 <div>
@@ -2866,6 +2885,7 @@ export default function Apply() {
                     adminMessage={adminMessage}
                     isEditingCorrection={isEditingCorrection}
                     activeIssue={activeIssue}
+                    existingDocs={existingDocs}
                   />
                 )}
                 {activeStep === 1 && (

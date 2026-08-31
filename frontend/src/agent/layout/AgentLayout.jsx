@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { NavLink, useNavigate, Outlet } from "react-router-dom";
 import {
   LayoutDashboard, ClipboardList, CalendarClock, Package, Activity,
-  LogOut, Menu, X,
+  LogOut, Menu, X, MessageSquare,
 } from "lucide-react";
 import { clearAgentSession } from "../../services/api";
 import { AgentDataProvider, useAgentData } from "../context/AgentDataContext";
@@ -14,6 +14,7 @@ const NAV = [
   { to: "/agent/visits",    label: "University Visits", icon: CalendarClock, badge: "visits" },
   { to: "/agent/delivery",  label: "Delivery", icon: Package, badge: "deliveries" },
   { to: "/agent/activity",  label: "Activity", icon: Activity },
+  { to: "/agent/support",   label: "Support", icon: MessageSquare },
 ];
 
 function badgeCount(key, data) {

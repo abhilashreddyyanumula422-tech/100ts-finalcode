@@ -538,3 +538,19 @@ class Issue(models.Model):
     def __str__(self):
         return f"Issue {self.id} for App {self.application.id} ({self.status})"
 
+
+class AgentAdminMessage(models.Model):
+    application = models.ForeignKey(Application, on_delete=models.CASCADE, related_name="agent_admin_messages", null=True, blank=True)
+    agent = models.ForeignKey(Agent, on_delete=models.CASCADE, related_name="admin_messages")
+    admin = models.ForeignKey(Admin, on_delete=models.SET_NULL, null=True, blank=True)
+    message = models.TextField(blank=True, null=True)
+    attachment = models.FileField(upload_to="agent_admin_messages/", blank=True, null=True)
+    is_from_admin = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Message between Admin and {self.agent.name} at {self.created_at}"

@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { FiFileText, FiClock, FiShield, FiTruck, FiCheckCircle } from "react-icons/fi";
 import { Search, Package, CheckCircle2, ExternalLink, Download, Truck, AlertTriangle, X } from "lucide-react";
 import { getApplicationStatus, acknowledgeDelivery } from "../../services/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -43,13 +43,14 @@ const COURIER_LINKS = {
 };
 
 const FileStatus = () => {
-  const [fileId, setFileId] = useState("");
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [fileId, setFileId] = useState(location.state?.trackingId || "");
   const [statusData, setStatusData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [showAckModal, setShowAckModal] = useState(false);
   const [ackLoading, setAckLoading] = useState(false);
-  const navigate = useNavigate();
 
   const steps = [
     { id: 0, label: "Application", desc: "File Opened", icon: <FiFileText /> },
@@ -61,7 +62,7 @@ const FileStatus = () => {
   ];
 
   const handleSearch = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     if (!fileId.trim()) return;
     setLoading(true);
     setNotFound(false);
@@ -82,6 +83,12 @@ const FileStatus = () => {
       setLoading(false);
     }
   };
+
+  React.useEffect(() => {
+    if (location.state?.trackingId && !statusData) {
+      handleSearch();
+    }
+  }, [location.state]);
 
   const currentStep = statusData ? (STATUS_STEP_MAP[statusData.status] ?? 0) : 0;
   const isDelivered = statusData?.agent_status === "DELIVERED" || statusData?.status === "completed";
@@ -111,34 +118,34 @@ const FileStatus = () => {
 
       {/* HEADER SECTION */}
       <motion.section
-        className="relative overflow-hidden bg-slate-800 py-24 px-6 text-center"
+        className="relative overflow-hidden bg-white py-12 px-6 text-center shadow-sm"
         initial="hidden"
         animate="visible"
         variants={fadeUp}
       >
-        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-400 rounded-full blur-[120px]"></div>
-          <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-blue-600 rounded-full blur-[100px]"></div>
+        <div className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-300 rounded-full blur-[120px]"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-blue-500 rounded-full blur-[100px]"></div>
         </div>
 
-        <div className="relative z-10 max-w-4xl mx-auto space-y-8">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-400/20 backdrop-blur-md border border-blue-400/30 rounded-full text-blue-300 font-black uppercase text-[10px] tracking-[0.2em]">
+        <div className="relative z-10 max-w-4xl mx-auto space-y-6">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-50 border border-blue-100 rounded-full text-blue-600 font-black uppercase text-[10px] tracking-[0.2em]">
             Live Tracking
           </div>
-          <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white tracking-tight leading-tight">
-            Track Your <span className="text-blue-400">Application</span>
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-slate-800 tracking-tight leading-tight">
+            Track Your <span className="text-blue-600">Application</span>
           </h1>
-          <p className="text-slate-300 text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed">
+          <p className="text-slate-500 text-base md:text-lg font-medium max-w-2xl mx-auto leading-relaxed">
             Enter your Application ID or Tracking ID to see exactly where your papers are.
           </p>
         </div>
       </motion.section>
 
-      <div className="max-w-7xl mx-auto px-6 py-20">
+      <div className="max-w-7xl mx-auto px-6 py-16">
 
         {/* SEARCH BOX */}
         <motion.div
-          className="max-w-3xl mx-auto -mt-32 relative z-30 mb-24"
+          className="max-w-3xl mx-auto -mt-16 relative z-30 mb-20"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -213,7 +220,7 @@ const FileStatus = () => {
 
                 {(statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN') && (
                   <button
-                    onClick={() => navigate("/apply")}
+                    onClick={() => navigate("/apply", { state: { editApplication: true, appData: statusData } })}
                     className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm transition shadow-sm"
                   >
                     ✏️ Edit & Correct
@@ -271,9 +278,19 @@ const FileStatus = () => {
                   )}
                 </div>
                 {statusData.admin_message && (
-                  <p className="text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 mt-2">
-                    📋 Admin Note: {statusData.admin_message}
-                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                    <p className="flex-1 text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 font-semibold flex items-center shadow-sm">
+                      📋 Admin Note: {statusData.admin_message}
+                    </p>
+                    {['changes_requested', 'rejected', 'pending'].includes(String(statusData.status).toLowerCase()) && (
+                      <button 
+                        onClick={() => navigate("/apply", { state: { editApplication: true, appData: statusData } })}
+                        className="self-start sm:self-stretch px-5 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-sm transition shadow flex items-center justify-center gap-2 whitespace-nowrap"
+                      >
+                        ✏️ Edit Documents
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
 

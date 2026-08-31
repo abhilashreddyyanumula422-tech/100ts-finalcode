@@ -8,15 +8,25 @@ export default function DocumentUpload({ agentId, assignmentId, existingUrl, onU
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  if (existingUrl) {
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  if (existingUrl && !isUpdating) {
     return (
       <div className="flex items-center gap-2.5 rounded-lg bg-emerald-50 ring-1 ring-inset ring-emerald-200 px-3.5 py-3">
         <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-        <div>
+        <div className="flex-1">
           <p className="text-[12px] font-semibold text-emerald-800">Scanned copy uploaded</p>
           <a href={existingUrl} target="_blank" rel="noopener noreferrer"
-             className="text-[12px] text-emerald-700 underline">View document</a>
+             className="text-[12px] text-emerald-700 underline hover:text-emerald-900 transition-colors">
+            View document
+          </a>
         </div>
+        <button 
+          onClick={() => setIsUpdating(true)} 
+          className="text-[11px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-3 py-1.5 rounded-md transition-colors"
+        >
+          Update
+        </button>
       </div>
     );
   }

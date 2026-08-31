@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MessageSquare } from "lucide-react";
 import { StatusPill } from "../ui";
 import { displayId } from "../../utils/format";
 
@@ -24,7 +24,15 @@ export default function RequestHeader({ assignment: a }) {
             </p>
             <p className="text-[13px] text-slate-500 mt-0.5">{a.applicant_name}</p>
           </div>
-          <StatusPill status={a.status} label={a.status_label} size="lg" />
+          <div className="flex flex-col items-end gap-2">
+            <StatusPill status={a.status} label={a.status_label} size="lg" />
+            <button
+              onClick={() => navigate(`/agent/support/${a.application_id}`)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition"
+            >
+              <MessageSquare size={14} /> Support Chat
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -14,11 +14,34 @@ import {
   X,
   UserCog,
   Activity,
+  MessageSquare,
 } from "lucide-react";
 
 const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [unreadSupportCount, setUnreadSupportCount] = React.useState(0);
+
+  React.useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const token = JSON.parse(localStorage.getItem("user"))?.token;
+        if (!token) return;
+        const res = await fetch('http://127.0.0.1:8000/api/admin/agent-support/unread-count/', {
+          headers: { "Authorization": `Token ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUnreadSupportCount(data.unread_count || 0);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchUnreadCount();
+    const intervalId = setInterval(fetchUnreadCount, 5000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   // LOGOUT FUNCTION
   const handleLogout = () => {
@@ -36,6 +59,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
     { name: "College Requests", path: "/admin/college-requests", icon: <Building2 size={20} /> },
     { name: "Agent Management", path: "/admin/agents", icon: <UserCog size={20} /> },
     { name: "Agent Tracking", path: "/admin/agent-tracking", icon: <Activity size={20} /> },
+    { name: "Agent Support", path: "/admin/agent-support", icon: <MessageSquare size={20} /> },
   ];
   // 🔸 PARTNER MENU
   const partnerItems = [
@@ -89,7 +113,15 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
                   >
                     {item.icon}
                     <span className="text-sm font-medium">{item.name}</span>
-                    {isActive && (
+                    {item.name === "Agent Support" && unreadSupportCount > 0 && (
+                      <span className="ml-auto bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">
+                        {unreadSupportCount} New
+                      </span>
+                    )}
+                    {isActive && item.name !== "Agent Support" && (
+                      <span className="ml-auto w-1.5 h-5 bg-white rounded-full"></span>
+                    )}
+                    {isActive && item.name === "Agent Support" && unreadSupportCount === 0 && (
                       <span className="ml-auto w-1.5 h-5 bg-white rounded-full"></span>
                     )}
                   </Link>
@@ -205,7 +237,15 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
                       >
                         {item.icon}
                         <span className="text-sm font-medium">{item.name}</span>
-                        {isActive && (
+                        {item.name === "Agent Support" && unreadSupportCount > 0 && (
+                          <span className="ml-auto bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">
+                            {unreadSupportCount} New
+                          </span>
+                        )}
+                        {isActive && item.name !== "Agent Support" && (
+                          <span className="ml-auto w-1.5 h-5 bg-white rounded-full"></span>
+                        )}
+                        {isActive && item.name === "Agent Support" && unreadSupportCount === 0 && (
                           <span className="ml-auto w-1.5 h-5 bg-white rounded-full"></span>
                         )}
                       </Link>

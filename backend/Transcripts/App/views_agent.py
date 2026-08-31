@@ -208,7 +208,18 @@ def _campus_location(name):
 def assignment_to_dict(assignment):
     app = assignment.application
     agent = assignment.agent
-    from .models import Users, Issue
+    from .models import Users, Issue, AgentAdminMessage
+    
+    unread_count_admin = 0
+    unread_count_agent = 0
+    if agent:
+        unread_count_admin = AgentAdminMessage.objects.filter(
+            application=app, agent=agent, is_from_admin=False, is_read=False
+        ).count()
+        unread_count_agent = AgentAdminMessage.objects.filter(
+            application=app, agent=agent, is_from_admin=True, is_read=False
+        ).count()
+
     if assignment.status == "ADDITIONAL_DOC_REQUIRED" and not app.issues.exclude(status='RESOLVED').exists():
         user = Users.objects.filter(email__iexact=app.email).first()
         if user:
@@ -249,6 +260,8 @@ def assignment_to_dict(assignment):
         "documents": documents_list,
         "expected_completion_date": expected_completion,
         "agent": agent_to_dict(agent) if agent else None,
+        "unread_count_admin": unread_count_admin,
+        "unread_count_agent": unread_count_agent,
         "status": assignment.status,
         "assigned_at": assignment.assigned_at.isoformat() if assignment.assigned_at else None,
         "accepted_at": assignment.accepted_at.isoformat() if assignment.accepted_at else None,
@@ -1454,3 +1467,181 @@ def agent_resolve_issue(request, agent_id, assignment_id):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+
+@csrf_exempt
+def admin_agent_messages(request, app_id):
+    """Admin view to get/post messages for a specific application's assigned agent."""
+    try:
+        from .models import AgentAdminMessage, Application, AgentAssignment
+        application = Application.objects.get(id=app_id)
+        # Fetch assignment for assigned agent
+        assignment = AgentAssignment.objects.filter(application=application).order_by('-assigned_at').first()
+        if not assignment or not assignment.agent:
+            return JsonResponse({"error": "No agent assigned to this application"}, status=400)
+        agent = assignment.agent
+    except Application.DoesNotExist:
+        return JsonResponse({"error": "Application not found"}, status=404)
+
+    if request.method == "GET":
+        messages = AgentAdminMessage.objects.filter(agent=agent, application=application).order_by('created_at')
+        
+        # Mark unread messages from agent as read by admin
+        messages.filter(is_from_admin=False, is_read=False).update(is_read=True)
+
+        data = []
+        for m in messages:
+            data.append({
+                "id": m.id,
+                "message": m.message,
+                "is_from_admin": m.is_from_admin,
+                "created_at": m.created_at.isoformat(),
+                "attachment": m.attachment.url if m.attachment else None,
+                "is_read": m.is_read
+            })
+        
+        app_details = {
+            "id": application.id,
+            "customer_name": getattr(application, 'fullName', 'N/A'),
+            "service": getattr(application, 'certificate_type', 'N/A'),
+            "university": getattr(application, 'university', 'N/A'),
+            "status": assignment.status if assignment else 'N/A',
+            "assigned_date": assignment.assigned_at.isoformat() if assignment and assignment.assigned_at else None,
+        }
+        agent_details = {
+            "id": agent.id,
+            "name": agent.name,
+            "phone": agent.mobile,
+            "email": agent.email,
+            "area": agent.location,
+            "employee_id": agent.employee_id
+        }
+
+        return JsonResponse({
+            "messages": data,
+            "application_details": app_details,
+            "agent_details": agent_details
+        })
+
+    elif request.method == "POST":
+        message_text = request.POST.get("message", "").strip()
+        attachment = request.FILES.get("attachment")
+        if not message_text and not attachment:
+            return JsonResponse({"error": "Message or attachment is required"}, status=400)
+        
+        msg = AgentAdminMessage.objects.create(
+            agent=agent,
+            application=application,
+            message=message_text,
+            attachment=attachment,
+            is_from_admin=True
+        )
+        return JsonResponse({
+            "id": msg.id,
+            "message": msg.message,
+            "is_from_admin": msg.is_from_admin,
+            "created_at": msg.created_at.isoformat(),
+            "attachment": msg.attachment.url if msg.attachment else None
+        }, status=201)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+@csrf_exempt
+def admin_unread_messages_count(request):
+    try:
+        from .models import AgentAdminMessage
+        count = AgentAdminMessage.objects.filter(is_from_admin=False, is_read=False).count()
+        return JsonResponse({"unread_count": count})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+@agent_required
+def agent_unread_messages_count(request, agent_id):
+    try:
+        from .models import AgentAdminMessage
+        count = AgentAdminMessage.objects.filter(agent_id=agent_id, is_from_admin=True, is_read=False).count()
+        return JsonResponse({"unread_count": count})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+@agent_required
+def agent_admin_messages(request, agent_id, app_id):
+    """Agent view to get/post messages to the Admin."""
+    if request.method == "GET":
+        from .models import AgentAdminMessage, Application, AgentAssignment
+        try:
+            application = Application.objects.get(id=app_id)
+            assignment = AgentAssignment.objects.filter(agent_id=agent_id, application=application).first()
+        except Application.DoesNotExist:
+            return JsonResponse({"error": "Application not found"}, status=404)
+
+        messages = AgentAdminMessage.objects.filter(agent_id=agent_id, application_id=app_id).order_by('created_at')
+        
+        # Mark unread messages from admin as read by agent
+        messages.filter(is_from_admin=True, is_read=False).update(is_read=True)
+        
+        data = []
+        for m in messages:
+            data.append({
+                "id": m.id,
+                "message": m.message,
+                "is_from_admin": m.is_from_admin,
+                "created_at": m.created_at.isoformat(),
+                "attachment": m.attachment.url if m.attachment else None,
+                "is_read": m.is_read
+            })
+        
+        agent = request.agent
+        app_details = {
+            "id": application.id,
+            "customer_name": getattr(application, 'fullName', 'N/A'),
+            "service": getattr(application, 'certificate_type', 'N/A'),
+            "university": getattr(application, 'university', 'N/A'),
+            "status": assignment.status if assignment else 'N/A',
+            "assigned_date": assignment.assigned_at.isoformat() if assignment and assignment.assigned_at else None,
+        }
+        agent_details = {
+            "id": agent.id,
+            "name": agent.name,
+            "phone": agent.mobile,
+            "email": agent.email,
+            "area": agent.location,
+            "employee_id": agent.employee_id
+        }
+        return JsonResponse({
+            "messages": data,
+            "application_details": app_details,
+            "agent_details": agent_details
+        })
+
+    elif request.method == "POST":
+        try:
+            from .models import AgentAdminMessage
+            message_text = request.POST.get("message", "").strip()
+            attachment = request.FILES.get("attachment")
+            if not message_text and not attachment:
+                return JsonResponse({"error": "Message or attachment is required"}, status=400)
+            
+            msg = AgentAdminMessage.objects.create(
+                agent_id=agent_id,
+                application_id=app_id,
+                message=message_text,
+                attachment=attachment,
+                is_from_admin=False
+            )
+            return JsonResponse({
+                "id": msg.id,
+                "message": msg.message,
+                "is_from_admin": msg.is_from_admin,
+                "created_at": msg.created_at.isoformat(),
+                "attachment": msg.attachment.url if msg.attachment else None
+            }, status=201)
+        except Exception as e:
+            print("ERROR IN agent_admin_messages POST:", str(e))
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)

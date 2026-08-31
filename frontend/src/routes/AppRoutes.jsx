@@ -27,6 +27,7 @@ const Sign = lazy(() => import("../user/pages/sign"));
 const ForgotPassword = lazy(() => import("../user/pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("../user/pages/ResetPassword"));
 const PaymentStatus = lazy(() => import("../user/pages/PaymentStatus"));
+const EditProfile = lazy(() => import("../user/pages/EditProfile"));
 
 const Transcripts = lazy(() => import("../user/pages/Transcripts"));
 const ProvisionalCertificate = lazy(() => import("../user/pages/provisionalCertificate"));
@@ -52,6 +53,7 @@ const EmailNotificationTemplate = lazy(() => import("../Admin/pages/EmailNotific
 const AdminUniversities = lazy(() => import("../Admin/pages/adminUniversities"));
 const AgentsManagement = lazy(() => import("../Admin/pages/AgentsManagement"));
 const AdminAgentTracking = lazy(() => import("../Admin/pages/AdminAgentTracking"));
+const AdminAgentMessages = lazy(() => import("../Admin/pages/AdminAgentMessages"));
 
 /* ================= AGENT ================= */
 import AgentLayout from "../agent/layout/AgentLayout";
@@ -63,6 +65,7 @@ const AgentVisits = lazy(() => import("../agent/pages/AgentVisits"));
 const AgentDelivery = lazy(() => import("../agent/pages/AgentDelivery"));
 const AgentActivity = lazy(() => import("../agent/pages/AgentActivity"));
 const AgentRequestDetail = lazy(() => import("../agent/pages/AgentRequestDetail"));
+const AgentAdminMessages = lazy(() => import("../agent/pages/AgentAdminMessages"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -100,6 +103,7 @@ const AppRoutes = () => {
           <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="reset-password" element={<ResetPassword />} />
           <Route path="payment/status" element={<PaymentStatus />} />
+          <Route path="edit-profile" element={<EditProfile />} />
 
           {/* Certificate Service Routes */}
           <Route path="services/transcripts" element={<Transcripts />} />
@@ -131,6 +135,8 @@ const AppRoutes = () => {
             {/* Agent Module */}
             <Route path="agents" element={<AgentsManagement />} />
             <Route path="agent-tracking" element={<AdminAgentTracking />} />
+            <Route path="agent-support" element={<AdminAgentMessages />} />
+            <Route path="agent-support/:appId" element={<AdminAgentMessages />} />
           </Route>
         </Route>
 
@@ -146,6 +152,8 @@ const AppRoutes = () => {
             <Route path="visits" element={<AgentVisits />} />
             <Route path="delivery" element={<AgentDelivery />} />
             <Route path="activity" element={<AgentActivity />} />
+            <Route path="support" element={<AgentAdminMessages />} />
+            <Route path="support/:appId" element={<AgentAdminMessages />} />
           </Route>
         </Route>
 

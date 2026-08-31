@@ -7,6 +7,14 @@ import {
   FiX,
   FiChevronRight,
   FiSearch,
+  FiUser,
+  FiLogOut,
+  FiHash,
+  FiBriefcase,
+  FiMail,
+  FiEdit,
+  FiCamera,
+  FiTruck
 } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -15,6 +23,7 @@ const Navbar = () => {
   const [activeSubMenu, setActiveSubMenu] = useState(null);
   const [collegesDropdown, setCollegesDropdown] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [profileDropdown, setProfileDropdown] = useState(false);
 
   // SEARCH STATES
   const [searchTerm, setSearchTerm] = useState("");
@@ -35,10 +44,12 @@ const Navbar = () => {
       if (
         !e.target.closest(".services-menu") &&
         !e.target.closest(".colleges-menu") &&
-        !e.target.closest(".search-box")
+        !e.target.closest(".search-box") &&
+        !e.target.closest(".profile-menu")
       ) {
         setServicesDropdown(false);
         setCollegesDropdown(false);
+        setProfileDropdown(false);
         setActiveSubMenu(null);
         setShowSearchResults(false);
       }
@@ -427,12 +438,6 @@ const Navbar = () => {
 
         {/* ACTION BUTTONS */}
         <div className="hidden lg:flex items-center gap-4 shrink-0">
-          {isLoggedIn && (user?.data?.customer_id || user?.customer_id) && (
-            <div className="hidden lg:flex items-center bg-slate-100 text-slate-700 px-3 py-1.5 rounded-full font-bold text-xs tracking-wide">
-              Customer ID: <span className="text-blue-600 ml-1">{user?.data?.customer_id || user?.customer_id}</span>
-            </div>
-          )}
-
           <Link
             to="/apply"
             className="inline-flex items-center justify-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-sm font-bold rounded-full shadow-xl hover:scale-105 transition-all whitespace-nowrap"
@@ -441,12 +446,115 @@ const Navbar = () => {
           </Link>
 
           {isLoggedIn ? (
-            <button
-              onClick={handleLogout}
-              className="inline-flex items-center justify-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-sm font-bold rounded-full shadow-xl hover:scale-105 transition-all whitespace-nowrap"
-            >
-              LOGOUT
-            </button>
+            <div className="relative profile-menu">
+              <button
+                onClick={() => setProfileDropdown(!profileDropdown)}
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors shadow-sm border border-slate-200"
+              >
+                <FiUser size={20} />
+              </button>
+
+              <AnimatePresence>
+                {profileDropdown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute right-0 top-full pt-3 z-[200]"
+                  >
+                    <div className="w-72 rounded-2xl border border-slate-100 bg-white shadow-2xl overflow-hidden flex flex-col">
+                      
+                      {/* Header Section */}
+                      <div className="px-6 py-6 bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex flex-col items-center justify-center gap-3 relative overflow-hidden">
+                        {/* Decorative background blur */}
+                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                        
+                        <div className="relative z-10 w-16 h-16 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center font-bold text-3xl shadow-lg backdrop-blur-sm">
+                          {(user?.data?.name || user?.name || user?.data?.username || user?.username || "U")[0].toUpperCase()}
+                        </div>
+                        <div className="relative z-10 text-center w-full">
+                          <h3 className="font-bold text-xl tracking-tight truncate">
+                            {user?.data?.name || user?.name || user?.data?.username || user?.username || "User"}
+                          </h3>
+                        </div>
+                      </div>
+                      
+                      {/* Info Section */}
+                      <div className="p-4 bg-slate-50/50 space-y-2 border-b border-slate-100">
+                        {/* Email */}
+                        <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-white border border-slate-100 shadow-sm">
+                          <div className="flex items-center gap-3 text-slate-500">
+                            <FiMail className="text-blue-500 text-lg" />
+                            <span className="text-sm font-medium">Email</span>
+                          </div>
+                          <span className="text-sm font-semibold text-slate-700 truncate max-w-[110px]" title={user?.data?.email || user?.email}>
+                            {user?.data?.email || user?.email || "N/A"}
+                          </span>
+                        </div>
+
+                        {/* Customer ID */}
+                        <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-white border border-slate-100 shadow-sm">
+                          <div className="flex items-center gap-3 text-slate-500">
+                            <FiBriefcase className="text-blue-500 text-lg" />
+                            <span className="text-sm font-medium">Customer ID</span>
+                          </div>
+                          <span className="text-sm font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md">
+                            {user?.data?.customer_id || user?.customer_id || "N/A"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Actions Section */}
+                      <div className="p-2 space-y-1">
+                        <Link 
+                          to="/apply" 
+                          state={{ showTrackingInput: true }}
+                          onClick={() => setProfileDropdown(false)}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition-colors font-semibold text-sm group"
+                        >
+                          <FiTruck className="text-lg text-slate-400 group-hover:text-blue-500 transition-colors" />
+                          <span>Tracking ID</span>
+                        </Link>
+                        
+                        <Link 
+                          to="/edit-profile" 
+                          onClick={() => setProfileDropdown(false)} 
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition-colors font-semibold text-sm group"
+                        >
+                          <FiEdit className="text-lg text-slate-400 group-hover:text-blue-500 transition-colors" />
+                          <span>Edit Profile</span>
+                        </Link>
+
+                        <label className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition-colors font-semibold text-sm group cursor-pointer">
+                          <FiCamera className="text-lg text-slate-400 group-hover:text-blue-500 transition-colors" />
+                          <span>Upload Photos</span>
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                            if(e.target.files && e.target.files[0]) {
+                              alert("Photo selected: " + e.target.files[0].name + ". Upload functionality to be implemented.");
+                              setProfileDropdown(false);
+                            }
+                          }} />
+                        </label>
+                      </div>
+                      
+                      {/* Footer Section */}
+                      <div className="p-3 border-t border-slate-100 bg-slate-50/80">
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-500 hover:text-white rounded-xl transition-all"
+                        >
+                          <FiLogOut className="text-lg" />
+                          <span>LOGOUT</span>
+                        </button>
+                      </div>
+
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           ) : (
             <Link
               to="/login"
