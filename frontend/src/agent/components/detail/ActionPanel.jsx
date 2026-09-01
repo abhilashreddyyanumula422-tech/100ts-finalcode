@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Zap, CheckCircle2, XCircle, ArrowRight, Upload, AlertCircle } from "lucide-react";
 import { Section, ActionButton, Banner } from "../ui";
 import { statusLabel } from "../../constants/workflow";
-import { acceptAssignment, rejectAssignment, updateAssignmentStatus, submitUniversityDecision, addLogistics, resolveIssue, API_BASE_URL } from "../../../services/api";
+import { acceptAssignment, rejectAssignment, updateAssignmentStatus, submitUniversityDecision, addLogistics, startDelivery, resolveIssue, API_BASE_URL } from "../../../services/api";
 
 export default function ActionPanel({ assignment: a, agentId, assignmentId, onChanged, onNotify }) {
   const [busy, setBusy] = useState(false);
@@ -17,7 +17,12 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
   const [refNum, setRefNum] = useState("");
   
   const [showLogistics, setShowLogistics] = useState(false);
+  const [courierPartner, setCourierPartner] = useState("Shiprocket");
   const [tracking, setTracking] = useState("");
+  const [trackingUrl, setTrackingUrl] = useState("");
+  const [dispatchDate, setDispatchDate] = useState("");
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
+  const [deliveryRemarks, setDeliveryRemarks] = useState("");
 
   const run = async (fn, successMsg) => {
     setBusy(true);
@@ -68,18 +73,27 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
   };
 
   const handleStartDelivery = async () => {
-    if (!tracking) return onNotify?.("Tracking ID required", true);
+    if (!courierPartner || !tracking || !dispatchDate) return onNotify?.("Courier Partner, Tracking ID, and Dispatch Date are required", true);
     setBusy(true);
     try {
-      const res = await addLogistics(agentId, assignmentId, "Delhivery", tracking);
+      const payload = {
+        courier_partner: courierPartner,
+        tracking_id: tracking,
+        tracking_url: trackingUrl,
+        dispatch_date: dispatchDate,
+        expected_delivery_date: expectedDeliveryDate,
+        delivery_remarks: deliveryRemarks
+      };
+      
+      const res = await startDelivery(agentId, assignmentId, payload);
+      
       if (res.ok) {
-        // Fast forward to PICKED_UP
-        await updateAssignmentStatus(agentId, assignmentId, "PICKED_UP", "");
-        onNotify?.("Delivery assigned & picked up"); 
+        onNotify?.("Delivery assigned & started"); 
         setShowLogistics(false); 
         onChanged?.();
+      } else {
+        onNotify?.(res.data?.error || "Failed", true);
       }
-      else onNotify?.(res.data?.error || "Failed", true);
     } catch { onNotify?.("Network error", true); }
     finally { setBusy(false); }
   };
@@ -231,7 +245,7 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
         )}
 
         {/* DELIVERY STAGE */}
-        {a.status === "APPROVED" && !showLogistics && (
+        {(a.status === "DOCUMENTS_COLLECTED" || a.status === "APPROVED") && !showLogistics && (
           <ActionButton variant="accent" full disabled={busy} onClick={() => setShowLogistics(true)}>
             Start Delivery Process
           </ActionButton>
@@ -262,11 +276,48 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
         )}
 
         {showLogistics && (
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-2">
-            <p className="text-[13px] font-bold mb-2">Tracking ID (Delhivery)</p>
-            <input type="text" value={tracking} onChange={e => setTracking(e.target.value)} placeholder="e.g. DL1234567890" className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-[13px] mb-3" />
-            <div className="flex gap-2">
-              <ActionButton variant="accent" full loading={busy} onClick={handleStartDelivery}>Save & Mark Picked Up</ActionButton>
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-2 space-y-3">
+            <p className="text-[14px] font-bold text-slate-800 border-b border-slate-200 pb-2">Delivery / Courier</p>
+            
+            <div>
+              <p className="text-[12px] font-bold mb-1">Courier Partner *</p>
+              <select value={courierPartner} onChange={e => setCourierPartner(e.target.value)} className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-[13px] bg-white">
+                <option value="Shiprocket">Shiprocket</option>
+                <option value="Delhivery">Delhivery</option>
+                <option value="BlueDart">BlueDart</option>
+                <option value="DTDC">DTDC</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div>
+              <p className="text-[12px] font-bold mb-1">Tracking ID / AWB *</p>
+              <input type="text" value={tracking} onChange={e => setTracking(e.target.value)} placeholder="e.g. DL1234567890" className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-[13px]" />
+            </div>
+
+            <div>
+              <p className="text-[12px] font-bold mb-1">Tracking URL</p>
+              <input type="url" value={trackingUrl} onChange={e => setTrackingUrl(e.target.value)} placeholder="e.g. https://delhivery.com/track" className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-[13px]" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-[12px] font-bold mb-1">Dispatch Date *</p>
+                <input type="date" value={dispatchDate} onChange={e => setDispatchDate(e.target.value)} className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-[13px]" />
+              </div>
+              <div>
+                <p className="text-[12px] font-bold mb-1">Expected Delivery</p>
+                <input type="date" value={expectedDeliveryDate} onChange={e => setExpectedDeliveryDate(e.target.value)} className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-[13px]" />
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[12px] font-bold mb-1">Remarks</p>
+              <textarea value={deliveryRemarks} onChange={e => setDeliveryRemarks(e.target.value)} placeholder="Any specific notes..." className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-[13px] resize-none" rows="2"></textarea>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <ActionButton variant="accent" full loading={busy} onClick={handleStartDelivery}>Start Delivery</ActionButton>
               <ActionButton variant="dangerSubtle" full disabled={busy} onClick={() => setShowLogistics(false)}>Cancel</ActionButton>
             </div>
           </div>
@@ -296,7 +347,7 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
         )}
         
         {/* FALLBACK FOR UNHANDLED STATES */}
-        {!["ASSIGNED_TO_AGENT", "ACCEPTED", "IN_PROGRESS", "SUBMITTED_TO_UNIVERSITY", "APPROVED", "PICKED_UP", "OUT_FOR_DELIVERY", "DELIVERED"].includes(a.status) && !showDocs && !showLogistics && !showReject && !showIssue && (
+        {!["ASSIGNED_TO_AGENT", "ACCEPTED", "IN_PROGRESS", "DOCUMENTS_COLLECTED", "SUBMITTED_TO_UNIVERSITY", "APPROVED", "DELIVERY_ASSIGNED", "PICKED_UP", "OUT_FOR_DELIVERY", "DELIVERED"].includes(a.status) && !showDocs && !showLogistics && !showReject && !showIssue && (
           <p className="text-[13px] text-slate-500 text-center py-2">Waiting for next steps or updates...</p>
         )}
       </div>

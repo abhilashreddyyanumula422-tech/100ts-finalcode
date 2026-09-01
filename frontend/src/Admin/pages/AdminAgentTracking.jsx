@@ -13,12 +13,17 @@ const STATUS_CONFIG = {
   ADDITIONAL_DOC_REQUIRED: { label: "More Docs Needed", color: "bg-orange-100 text-orange-700", dot: "bg-orange-500" },
   COMPLETED: { label: "Completed", color: "bg-green-100 text-green-700", dot: "bg-green-500" },
   REJECTED_BY_AGENT: { label: "Rejected", color: "bg-red-100 text-red-700", dot: "bg-red-500" },
+  DELIVERY_ASSIGNED: { label: "Delivery Assigned", color: "bg-indigo-100 text-indigo-700", dot: "bg-indigo-500" },
+  PICKED_UP: { label: "Picked Up", color: "bg-blue-100 text-blue-700", dot: "bg-blue-500" },
+  OUT_FOR_DELIVERY: { label: "Out for Delivery", color: "bg-yellow-100 text-yellow-700", dot: "bg-yellow-500" },
+  DELIVERED: { label: "Delivered", color: "bg-green-100 text-green-700", dot: "bg-green-500" },
 };
 
 const WORKFLOW_STEPS = [
   "ASSIGNED_TO_AGENT", "ACCEPTED", "IN_PROGRESS",
   "DOCUMENTS_COLLECTED", "SUBMITTED_TO_UNIVERSITY", 
-  "APPROVED", "COMPLETED"
+  "APPROVED", "DELIVERY_ASSIGNED", "PICKED_UP", 
+  "OUT_FOR_DELIVERY", "DELIVERED", "COMPLETED"
 ];
 
 function StatusBadge({ status }) {
@@ -141,6 +146,32 @@ function AssignmentRow({ assignment }) {
                   <a href={`/admin/agent-support/${assignment.application_id}`} className="inline-flex items-center gap-1 text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-3 rounded-lg transition-colors">
                     <MessageSquare size={14} /> Open Chat
                   </a>
+                </div>
+              )}
+              {assignment.courier_partner && (
+                <div className="col-span-1 sm:col-span-3 bg-blue-50/50 border border-blue-100 p-4 rounded-xl space-y-2">
+                  <p className="text-xs font-bold text-blue-800 uppercase mb-2">Delivery / Courier Details</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-xs text-slate-500 mb-0.5">Courier</p>
+                      <p className="text-sm font-semibold text-slate-800">{assignment.courier_partner}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 mb-0.5">Tracking ID</p>
+                      <p className="text-sm font-semibold text-slate-800">{assignment.tracking_id}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 mb-0.5">Dispatch Date</p>
+                      <p className="text-sm font-semibold text-slate-800">{assignment.dispatch_date || "—"}</p>
+                    </div>
+                    <div>
+                      {assignment.tracking_url && (
+                        <a href={assignment.tracking_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center w-full sm:w-auto mt-2 sm:mt-0 text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded-lg transition-colors">
+                          Track Parcel
+                        </a>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
               {assignment.agent_rejection_reason && (

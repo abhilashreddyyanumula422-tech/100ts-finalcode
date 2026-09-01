@@ -624,6 +624,9 @@ export const uploadCollectedDocument = (agentId, assignmentId, file) => {
 export const addLogistics = (agentId, assignmentId, courier_partner, tracking_id) =>
   agentPost(`/api/agent/${agentId}/assignments/${assignmentId}/add-logistics/`, { courier_partner, tracking_id });
 
+export const startDelivery = (agentId, assignmentId, payload) =>
+  agentPost(`/api/agent/${agentId}/assignment/${assignmentId}/start-delivery/`, payload);
+
 export const saveVisitDetails = (agentId, assignmentId, data) =>
   agentPost(`/api/agent/${agentId}/assignments/${assignmentId}/visit/`, data);
 
@@ -701,6 +704,7 @@ export default {
   resolveIssue,
   uploadCollectedDocument,
   addLogistics,
+  startDelivery,
   saveVisitDetails,
   getVisitDetails,
   uploadVisitPhoto,

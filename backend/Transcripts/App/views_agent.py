@@ -1580,7 +1580,9 @@ def agent_admin_messages(request, agent_id, app_id):
         messages = AgentAdminMessage.objects.filter(agent_id=agent_id, application_id=app_id).order_by('created_at')
         
         # Mark unread messages from admin as read by agent
-        messages.filter(is_from_admin=True, is_read=False).update(is_read=True)
+        unread = messages.filter(is_from_admin=True, is_read=False)
+        if unread.exists():
+            unread.update(is_read=True)
         
         data = []
         for m in messages:
@@ -1642,6 +1644,234 @@ def agent_admin_messages(request, agent_id, app_id):
             print("ERROR IN agent_admin_messages POST:", str(e))
             import traceback
             traceback.print_exc()
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+@csrf_exempt
+@agent_required
+def agent_start_delivery(request, agent_id, assignment_id):
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
+
+    try:
+        import json
+        from .models import AgentAssignment, TrackingHistory
+        data = json.loads(request.body)
+        
+        courier_partner = data.get("courier_partner")
+        tracking_id = data.get("tracking_id")
+        tracking_url = data.get("tracking_url")
+        dispatch_date = data.get("dispatch_date")
+        expected_delivery_date = data.get("expected_delivery_date")
+        delivery_remarks = data.get("delivery_remarks")
+
+        if not courier_partner or not tracking_id or not dispatch_date:
+            return JsonResponse({"error": "Courier Partner, Tracking ID, and Dispatch Date are required."}, status=400)
+
+        assignment = AgentAssignment.objects.get(id=assignment_id, agent_id=agent_id)
+        
+        assignment.courier_partner = courier_partner
+        assignment.tracking_id = tracking_id
+        assignment.tracking_url = tracking_url
+        assignment.dispatch_date = dispatch_date
+        assignment.expected_delivery_date = expected_delivery_date or None
+        assignment.delivery_remarks = delivery_remarks
+        assignment.status = "DELIVERY_ASSIGNED"
+        assignment.save()
+
+        TrackingHistory.objects.create(
+            application=assignment.application,
+            status="Delivery Started",
+            description=f"Courier: {courier_partner} | Tracking ID: {tracking_id}"
+        )
+
+        return JsonResponse({"message": "Delivery details saved successfully!"}, status=200)
+
+    except AgentAssignment.DoesNotExist:
+        return JsonResponse({"error": "Assignment not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def admin_all_conversations(request):
+    """Returns a list of all active conversations, both app-specific and general."""
+    try:
+        from .models import AgentAdminMessage, AgentAssignment, Agent
+        from django.db.models import Count, Q
+        
+        # 1. Fetch Assignments
+        assignments = AgentAssignment.objects.select_related('application', 'agent').all()
+        
+        # 2. Find general chats
+        general_messages = AgentAdminMessage.objects.filter(application__isnull=True).values('agent_id').distinct()
+        general_agent_ids = [m['agent_id'] for m in general_messages]
+        
+        results = []
+        for a in assignments:
+            if not a.agent: continue
+            unread_count = AgentAdminMessage.objects.filter(
+                application=a.application, agent=a.agent, is_from_admin=False, is_read=False
+            ).count()
+            
+            results.append({
+                "id": f"app-{a.id}",
+                "application_id": a.application.id,
+                "application_display_id": a.application.application_id,
+                "applicant_name": a.application.fullName,
+                "agent": {
+                    "id": a.agent.id,
+                    "name": a.agent.name,
+                },
+                "unread_count_admin": unread_count,
+                "type": "app"
+            })
+            
+        for agent_id in general_agent_ids:
+            agent = Agent.objects.get(id=agent_id)
+            unread_count = AgentAdminMessage.objects.filter(
+                application__isnull=True, agent_id=agent_id, is_from_admin=False, is_read=False
+            ).count()
+            
+            results.append({
+                "id": f"gen-{agent_id}",
+                "application_id": "general",
+                "application_display_id": "General Support",
+                "applicant_name": "General Query",
+                "agent": {
+                    "id": agent.id,
+                    "name": agent.name,
+                },
+                "unread_count_admin": unread_count,
+                "type": "general"
+            })
+            
+        # Add any agent who doesn't have a chat yet but is an agent? 
+        # For simplicity, if they start a chat, it shows up here.
+            
+        return JsonResponse(results, safe=False)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def admin_general_messages(request, agent_id):
+    try:
+        from .models import AgentAdminMessage, Agent
+        agent = Agent.objects.get(id=agent_id)
+    except Agent.DoesNotExist:
+        return JsonResponse({"error": "Agent not found"}, status=404)
+
+    if request.method == "GET":
+        messages = AgentAdminMessage.objects.filter(agent=agent, application__isnull=True).order_by('created_at')
+        messages.filter(is_from_admin=False, is_read=False).update(is_read=True)
+
+        data = [{
+            "id": m.id,
+            "message": m.message,
+            "is_from_admin": m.is_from_admin,
+            "created_at": m.created_at.isoformat(),
+            "attachment": m.attachment.url if m.attachment else None,
+            "is_read": m.is_read
+        } for m in messages]
+        
+        agent_details = {
+            "id": agent.id,
+            "name": agent.name,
+            "phone": agent.mobile,
+            "email": agent.email,
+            "area": agent.location,
+            "employee_id": agent.employee_id
+        }
+
+        return JsonResponse({
+            "messages": data,
+            "application_details": {"id": "General", "customer_name": "N/A", "status": "Active"},
+            "agent_details": agent_details
+        })
+
+    elif request.method == "POST":
+        message_text = request.POST.get("message", "").strip()
+        attachment = request.FILES.get("attachment")
+        if not message_text and not attachment:
+            return JsonResponse({"error": "Message or attachment is required"}, status=400)
+        
+        msg = AgentAdminMessage.objects.create(
+            agent=agent,
+            application=None,
+            message=message_text,
+            attachment=attachment,
+            is_from_admin=True
+        )
+        return JsonResponse({
+            "id": msg.id,
+            "message": msg.message,
+            "is_from_admin": msg.is_from_admin,
+            "created_at": msg.created_at.isoformat(),
+            "attachment": msg.attachment.url if msg.attachment else None
+        }, status=201)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+@csrf_exempt
+@agent_required
+def agent_general_messages(request, agent_id):
+    if request.method == "GET":
+        from .models import AgentAdminMessage, Agent
+        agent = Agent.objects.get(id=agent_id)
+        messages = AgentAdminMessage.objects.filter(agent_id=agent_id, application__isnull=True).order_by('created_at')
+        unread = messages.filter(is_from_admin=True, is_read=False)
+        if unread.exists():
+            unread.update(is_read=True)
+        
+        data = [{
+            "id": m.id,
+            "message": m.message,
+            "is_from_admin": m.is_from_admin,
+            "created_at": m.created_at.isoformat(),
+            "attachment": m.attachment.url if m.attachment else None,
+            "is_read": m.is_read
+        } for m in messages]
+        
+        agent_details = {
+            "id": agent.id,
+            "name": agent.name,
+            "phone": agent.mobile,
+            "email": agent.email,
+            "area": agent.location,
+            "employee_id": agent.employee_id
+        }
+        return JsonResponse({
+            "messages": data,
+            "application_details": {"id": "General", "customer_name": "N/A", "status": "Active"},
+            "agent_details": agent_details
+        })
+
+    elif request.method == "POST":
+        try:
+            from .models import AgentAdminMessage
+            message_text = request.POST.get("message", "").strip()
+            attachment = request.FILES.get("attachment")
+            if not message_text and not attachment:
+                return JsonResponse({"error": "Message or attachment is required"}, status=400)
+            
+            msg = AgentAdminMessage.objects.create(
+                agent_id=agent_id,
+                application=None,
+                message=message_text,
+                attachment=attachment,
+                is_from_admin=False
+            )
+            return JsonResponse({
+                "id": msg.id,
+                "message": msg.message,
+                "is_from_admin": msg.is_from_admin,
+                "created_at": msg.created_at.isoformat(),
+                "attachment": msg.attachment.url if msg.attachment else None
+            }, status=201)
+        except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)

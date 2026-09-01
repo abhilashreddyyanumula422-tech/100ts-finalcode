@@ -405,6 +405,9 @@ class AgentAssignment(models.Model):
     )
     tracking_id = models.CharField(max_length=100, null=True, blank=True)
     tracking_url = models.URLField(null=True, blank=True)
+    dispatch_date = models.DateField(null=True, blank=True)
+    expected_delivery_date = models.DateField(null=True, blank=True)
+    delivery_remarks = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return f"Assignment: {self.application} → {self.agent} [{self.status}]"

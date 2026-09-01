@@ -47,7 +47,7 @@ export default function AdminAgentMessages() {
   const fetchAssignments = async (isPoll = false) => {
     if (!isPoll && assignments.length === 0) setListLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/admin/agent-assignments/`, {
+      const res = await fetch(`${API_BASE_URL}/api/admin/agent-support/all-conversations/`, {
         headers: { "Authorization": `Token ${JSON.parse(localStorage.getItem("user"))?.token}` }
       });
       if (res.ok) {
@@ -65,7 +65,13 @@ export default function AdminAgentMessages() {
     if (!isPoll) setChatLoading(true);
     if (!isPoll) setError("");
     try {
-      const res = await fetch(`${API_BASE_URL}/api/admin/applications/${appId}/messages/`, {
+      let endpoint = `${API_BASE_URL}/api/admin/applications/${appId}/messages/`;
+      if (appId.startsWith("general-")) {
+        const agentId = appId.split("-")[1];
+        endpoint = `${API_BASE_URL}/api/admin/agent-support/general/${agentId}/`;
+      }
+
+      const res = await fetch(endpoint, {
         headers: { "Authorization": `Token ${JSON.parse(localStorage.getItem("user"))?.token}` }
       });
       if (res.ok) {
@@ -97,7 +103,13 @@ export default function AdminAgentMessages() {
       if (newMessage.trim()) formData.append("message", newMessage);
       if (attachment) formData.append("attachment", attachment);
 
-      const res = await fetch(`${API_BASE_URL}/api/admin/applications/${appId}/messages/`, {
+      let endpoint = `${API_BASE_URL}/api/admin/applications/${appId}/messages/`;
+      if (appId.startsWith("general-")) {
+        const agentId = appId.split("-")[1];
+        endpoint = `${API_BASE_URL}/api/admin/agent-support/general/${agentId}/`;
+      }
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Authorization": `Token ${JSON.parse(localStorage.getItem("user"))?.token}` },
         body: formData,
@@ -162,12 +174,13 @@ export default function AdminAgentMessages() {
             </div>
           ) : (
             filteredAssignments.map(a => {
-              const isActive = appId === a.application_id.toString();
+              const targetPathId = a.type === 'general' ? 'general-' + a.agent?.id : a.application_id;
+              const isActive = appId === targetPathId?.toString();
               const unreadCount = a.unread_count_admin || 0;
               return (
                 <div
                   key={a.id}
-                  onClick={() => navigate(`/admin/agent-support/${a.application_id}`)}
+                  onClick={() => navigate(`/admin/agent-support/${targetPathId}`)}
                   className={`p-4 cursor-pointer transition flex items-start gap-3 hover:bg-slate-50 ${isActive ? 'bg-indigo-50/50 hover:bg-indigo-50/80 border-l-4 border-indigo-600' : 'border-l-4 border-transparent'}`}
                 >
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm ${isActive ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
@@ -219,13 +232,20 @@ export default function AdminAgentMessages() {
                     {agentDetails?.name} 
                     <span className="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold">AGENT</span>
                   </h2>
-                  <div className="text-[12px] text-slate-500 flex items-center gap-2 mt-0.5">
-                    <span>{appDetails?.id}</span>
-                    <span>•</span>
-                    <span>{appDetails?.customer_name}</span>
-                    <span>•</span>
-                    <span className="text-indigo-600 font-medium">{appDetails?.status?.replace(/_/g, ' ')}</span>
-                  </div>
+                  {!appId.startsWith('general-') && (
+                    <div className="text-[12px] text-slate-500 flex items-center gap-2 mt-0.5">
+                      <span>{appDetails?.id}</span>
+                      <span>•</span>
+                      <span>{appDetails?.customer_name}</span>
+                      <span>•</span>
+                      <span className="text-indigo-600 font-medium">{appDetails?.status?.replace(/_/g, ' ')}</span>
+                    </div>
+                  )}
+                  {appId.startsWith('general-') && (
+                    <div className="text-[12px] text-slate-500 flex items-center gap-2 mt-0.5">
+                      <span className="text-indigo-600 font-medium">General Support Chat</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
