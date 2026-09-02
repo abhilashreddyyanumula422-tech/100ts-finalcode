@@ -1385,7 +1385,7 @@ const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, 
         </div>
       )}
 
-      {adminMessage && !isEditingCorrection && (
+      {adminMessage && !activeIssue && (
         <div className="info-panel amber" style={{ marginBottom: 24, border: "2px solid #fbbf24" }}>
           <span className="info-icon">⚠️</span>
           <div style={{ flex: 1 }}>
@@ -2199,6 +2199,7 @@ export default function Apply() {
     const restoreState = async () => {
       const storedId = localStorage.getItem("applicationId");
       const storedFlow = localStorage.getItem("flowType");
+      const isNewRequest = localStorage.getItem("isNewRequest") === "true";
       const user = JSON.parse(localStorage.getItem("user"));
       const userEmail = user?.data?.email;
 
@@ -2207,7 +2208,7 @@ export default function Apply() {
       let fetchUrl = "";
       if (storedId) {
         fetchUrl = `${API_BASE}/api/application/${storedId}/status/`;
-      } else if (userEmail) {
+      } else if (userEmail && !isNewRequest) {
         fetchUrl = `${API_BASE}/api/application-status/?email=${userEmail}`;
       }
 
@@ -2552,6 +2553,7 @@ export default function Apply() {
         setRejectionReason("");
         localStorage.setItem("applicationId", data.application_id);
         localStorage.setItem("flowType", flowType); // Persist flowType locally
+        localStorage.removeItem("isNewRequest");
         goStep(1);
       } else {
         alert(data.error || "Submission failed");
@@ -2647,35 +2649,10 @@ export default function Apply() {
   };
 
   const reset = () => {
-    const user = JSON.parse(localStorage.getItem("user"));
-    const userData = user?.data || {};
-    setForm({
-      fullName: userData.name || "",
-      altPhone: "",
-      email: userData.email || "",
-      phone: "",
-      requirement: "",
-      referenceNumber: "",
-      termsAccepted: false,
-      specialCondition: false
-    });
-    setDegrees([]);
-    setUpProg({ cmm: 0, degree: 0, internship: 0 });
-    setUpNames({ cmm: null, degree: null, internship: null });
-    setUpCompressed({ cmm: null, degree: null, internship: null });
-    setDegrees([{ id: 1, type: "", university: "", course: "", college: "" }]);
-    setApplicationId(null);
-    setAppStatus("pending_approval");
-    setAdminMessage("");
-    setRejectionReason("");
-    setFlowType(null);
-    setActiveIssue(null);
-    setIsEditingCorrection(false);
-    setRawAppData(null);
-    setExistingDocs({});
     localStorage.removeItem("applicationId");
     localStorage.removeItem("flowType");
-    goStep(0);
+    localStorage.setItem("isNewRequest", "true");
+    window.location.href = "/apply";
   };
 
   const handleAcknowledge = async () => {
@@ -2894,7 +2871,14 @@ export default function Apply() {
                     adminMessage={adminMessage}
                     rejectionReason={rejectionReason}
                     goStep={goStep}
-                    onRetry={() => goStep(0)}
+                    onRetry={() => {
+                      if (appStatus === "changes_requested") {
+                        setIsEditingCorrection(true);
+                      } else {
+                        setIsEditingCorrection(false);
+                      }
+                      goStep(0);
+                    }}
                   />
                 )}
                 {activeStep === 2 && (

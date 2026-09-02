@@ -23,6 +23,8 @@ const StudentRequests = () => {
   const [issueType, setIssueType] = useState('Document Issue');
   const [exactProblem, setExactProblem] = useState('The uploaded ID proof is blurred and unreadable.');
   const [copied, setCopied] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
   const companyName = "100 Transcripts";
 
   // --- Rejection Reason Modal State ---
@@ -47,12 +49,12 @@ const StudentRequests = () => {
     };
 
     fetchRequests();
-    
+
     // Auto-refresh every 10 seconds
     const interval = setInterval(() => {
       fetchRequests();
     }, 10000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -186,6 +188,21 @@ ${companyName} Support Team` : "";
     navigator.clipboard.writeText(emailBody);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleConfirmSend = async () => {
+    if (!replyingTo) return;
+    
+    // Update the DB status
+    await updateStatus(replyingTo.raw_id, "changes_requested", exactProblem);
+
+    // Open Gmail
+    const subject = encodeURIComponent(`Action Required: ${issueType} for Request ${replyingTo.application_id || replyingTo.id}`);
+    const body = encodeURIComponent(emailBody);
+    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${replyingTo.email}&su=${subject}&body=${body}`, '_blank');
+    
+    setShowConfirmModal(false);
+    setReplyingTo(null);
   };
 
   // WhatsApp Integration
@@ -352,8 +369,8 @@ Please check your email for detailed information or contact us if you have any q
                   <div className="flex flex-col gap-1 items-start">
                     <span
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-wide whitespace-nowrap ${req.payment === "Fully Paid"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : req.payment === "Partially Paid"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : req.payment === "Partially Paid"
                           ? "bg-amber-100 text-amber-700"
                           : "bg-rose-100 text-rose-700"
                         }`}
@@ -371,8 +388,7 @@ Please check your email for detailed information or contact us if you have any q
                 {/* STATUS */}
                 <td className="p-4">
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-bold ${
-                      String(req.status || "").toLowerCase().trim() === "approved"
+                    className={`px-3 py-1 rounded-full text-xs font-bold ${String(req.status || "").toLowerCase().trim() === "approved"
                         ? "bg-green-100 text-green-700"
                         : String(req.status || "").toLowerCase().trim() === "pending_approval"
                           ? "bg-orange-100 text-orange-700"
@@ -381,7 +397,7 @@ Please check your email for detailed information or contact us if you have any q
                             : String(req.status || "").toLowerCase().trim() === "rejected"
                               ? "bg-red-100 text-red-700"
                               : "bg-slate-100 text-slate-700"
-                    }`}
+                      }`}
                   >
                     {req.status === "pending_approval" ? "Pending Approval" : req.status || "Pending"}
                   </span>
@@ -458,12 +474,12 @@ Please check your email for detailed information or contact us if you have any q
           <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
             <div className="flex-1 p-8 space-y-6 overflow-y-auto border-r border-slate-100">
               <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Mail className="text-blue-600" /> Issue Notification</h2>
+                <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Send className="text-blue-600" /> Issue Generator</h2>
                 <button onClick={() => setReplyingTo(null)} className="p-2 hover:bg-slate-100 rounded-full transition"><X size={24} /></button>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase ml-1">Recipient</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase ml-1">Student</label>
                   <div className="p-3 bg-slate-50 border rounded-xl font-bold text-slate-700 mt-1">{replyingTo.fullName} ({replyingTo.email})</div>
                 </div>
                 <div>
@@ -476,28 +492,65 @@ Please check your email for detailed information or contact us if you have any q
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase ml-1">Exact Problem Description</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase ml-1">Problem Description</label>
                   <textarea rows="4" className="w-full border rounded-xl p-3 mt-1 outline-none focus:ring-2 focus:ring-blue-500" value={exactProblem} onChange={(e) => setExactProblem(e.target.value)} />
                 </div>
               </div>
             </div>
             <div className="w-full md:w-[350px] bg-slate-50 p-8 flex flex-col">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-slate-700">Preview</h3>
-                <button onClick={handleCopy} className={`flex items-center gap-1 text-xs px-3 py-1 rounded-lg transition ${copied ? 'bg-green-600 text-white' : 'bg-white border text-slate-600 hover:bg-slate-100'}`}>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Preview</h3>
+                <button onClick={handleCopy} className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-medium transition border shadow-sm ${copied ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}>
                   {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied' : 'Copy'}
                 </button>
               </div>
-              <div className="bg-white p-4 rounded-xl border border-slate-200 text-sm text-slate-600 whitespace-pre-wrap flex-1 italic overflow-y-auto">
+              <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm text-[13px] text-slate-600 whitespace-pre-wrap flex-1 italic overflow-y-auto leading-relaxed">
                 {emailBody}
               </div>
-              <button onClick={handleSendEmail} className="w-full mt-6 bg-blue-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 shadow-xl transition">
+              <button onClick={() => setShowConfirmModal(true)} className="w-full mt-6 bg-blue-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 shadow-[0_4px_12px_rgba(37,99,235,0.2)] transition-all">
                 <Send size={18} /> Send Notification
               </button>
-              <div className="mt-4 p-3 bg-amber-50 rounded-xl flex gap-2 border border-amber-100">
-                <AlertCircle className="text-amber-500 shrink-0" size={16} />
-                <p className="text-[10px] text-amber-800 leading-tight">Notification will open in your mail app.</p>
+              <div className="mt-4 p-3 bg-amber-50/80 rounded-xl flex items-center justify-center gap-2 border border-amber-200/50">
+                <AlertCircle className="text-amber-500 shrink-0" size={14} />
+                <p className="text-[11px] font-medium text-amber-800/90 leading-tight">Notification will open in your default mail app.</p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- CONFIRMATION MODAL --- */}
+      {showConfirmModal && replyingTo && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center border-b pb-4">
+              <h2 className="text-xl font-bold text-amber-500 flex items-center gap-2">
+                <AlertCircle size={22} /> Request Changes
+              </h2>
+              <button onClick={() => setShowConfirmModal(false)} className="hover:bg-slate-100 p-1 rounded-full transition"><X size={20} /></button>
+            </div>
+            
+            <p className="text-sm text-slate-700">
+              Requesting changes for <span className="font-bold">{replyingTo.fullName}</span> ({replyingTo.id || replyingTo.application_id})
+            </p>
+
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex gap-1 mb-1">Issue Details <span className="text-red-500">*</span></label>
+              <textarea 
+                rows="4" 
+                className="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-amber-500 text-sm shadow-sm" 
+                value={exactProblem} 
+                onChange={(e) => setExactProblem(e.target.value)}
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-3 bg-slate-50 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition border border-slate-200">
+                Cancel
+              </button>
+              <button onClick={handleConfirmSend} className="flex-1 py-3 bg-amber-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-amber-600 transition shadow-md">
+                <Send size={18} /> Send Request
+              </button>
             </div>
           </div>
         </div>
@@ -538,46 +591,44 @@ Please check your email for detailed information or contact us if you have any q
                   <div className="p-5 rounded-3xl flex flex-col gap-4 min-w-[260px] bg-white border border-slate-200 shadow-sm transition-all duration-300 hover:shadow-md">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`p-2.5 rounded-xl flex items-center justify-center ${
-                          selectedStudent.payment === "Fully Paid" ? "bg-emerald-50 text-emerald-600" :
-                          selectedStudent.payment === "Partially Paid" ? "bg-amber-50 text-amber-600" :
-                          "bg-slate-50 text-slate-600"
-                        }`}>
+                        <div className={`p-2.5 rounded-xl flex items-center justify-center ${selectedStudent.payment === "Fully Paid" ? "bg-emerald-50 text-emerald-600" :
+                            selectedStudent.payment === "Partially Paid" ? "bg-amber-50 text-amber-600" :
+                              "bg-slate-50 text-slate-600"
+                          }`}>
                           <CreditCard size={20} strokeWidth={2.5} />
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Payment</p>
-                          <p className={`text-sm font-bold ${
-                            selectedStudent.payment === "Fully Paid" ? "text-emerald-700" :
-                            selectedStudent.payment === "Partially Paid" ? "text-amber-700" :
-                            "text-slate-700"
-                          }`}>{selectedStudent.payment}</p>
+                          <p className={`text-sm font-bold ${selectedStudent.payment === "Fully Paid" ? "text-emerald-700" :
+                              selectedStudent.payment === "Partially Paid" ? "text-amber-700" :
+                                "text-slate-700"
+                            }`}>{selectedStudent.payment}</p>
                         </div>
                       </div>
-                      
+
                       {selectedStudent.payment === "Fully Paid" && (
-                         <div className="bg-emerald-500 rounded-full p-1 text-white shadow-sm">
-                           <CheckCircle2 size={16} strokeWidth={3} />
-                         </div>
+                        <div className="bg-emerald-500 rounded-full p-1 text-white shadow-sm">
+                          <CheckCircle2 size={16} strokeWidth={3} />
+                        </div>
                       )}
                     </div>
 
                     {selectedStudent.total_amount > 0 && (
                       <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col gap-2">
                         <div className="flex justify-between items-center">
-                           <span className="text-xs font-semibold text-slate-500">Total Amount</span>
-                           <span className="text-sm font-bold text-slate-800">₹{selectedStudent.total_amount}</span>
+                          <span className="text-xs font-semibold text-slate-500">Total Amount</span>
+                          <span className="text-sm font-bold text-slate-800">₹{selectedStudent.total_amount}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                           <span className="text-xs font-semibold text-slate-500">Amount Paid</span>
-                           <span className="text-sm font-bold text-emerald-600">₹{selectedStudent.paid_amount}</span>
+                          <span className="text-xs font-semibold text-slate-500">Amount Paid</span>
+                          <span className="text-sm font-bold text-emerald-600">₹{selectedStudent.paid_amount}</span>
                         </div>
                         {selectedStudent.total_amount - selectedStudent.paid_amount > 0 && (
                           <>
                             <div className="h-px bg-slate-200 w-full my-1"></div>
                             <div className="flex justify-between items-center">
-                               <span className="text-xs font-bold text-slate-700">Remaining</span>
-                               <span className="text-sm font-black text-amber-600 bg-amber-100/50 px-2 py-0.5 rounded-md">₹{selectedStudent.total_amount - selectedStudent.paid_amount}</span>
+                              <span className="text-xs font-bold text-slate-700">Remaining</span>
+                              <span className="text-sm font-black text-amber-600 bg-amber-100/50 px-2 py-0.5 rounded-md">₹{selectedStudent.total_amount - selectedStudent.paid_amount}</span>
                             </div>
                           </>
                         )}
@@ -611,7 +662,7 @@ Please check your email for detailed information or contact us if you have any q
                           </button>
                           <button
                             onClick={() => {
-                            window.open(downloadDocument(doc.id));
+                              window.open(downloadDocument(doc.id));
                             }}
                             className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200 transition"
                           >
@@ -698,7 +749,7 @@ Please check your email for detailed information or contact us if you have any q
                 <div className="relative space-y-6">
                   {/* Vertical connecting line */}
                   <div className="absolute left-[15px] top-4 bottom-4 w-[2px] bg-slate-200 z-0"></div>
-                  
+
                   {selectedStudent.trackingHistory?.map((item, index) => {
                     const isCompleted = item.status === 'completed';
                     const isCurrent = item.status === 'current';
@@ -708,24 +759,22 @@ Please check your email for detailed information or contact us if you have any q
                     return (
                       <div key={index} className="relative pl-12">
                         {/* Dot / Icon */}
-                        <div className={`absolute left-0 top-0 w-8 h-8 rounded-full flex items-center justify-center z-10 border-2 transition-colors ${
-                          isCompleted ? 'bg-green-500 border-green-500 text-white shadow-sm' :
-                          isFailed ? 'bg-red-500 border-red-500 text-white shadow-sm' :
-                          isCurrent ? 'bg-white border-blue-500 text-blue-500 shadow-md ring-4 ring-blue-50' :
-                          'bg-white border-slate-200 text-slate-300'
-                        }`}>
+                        <div className={`absolute left-0 top-0 w-8 h-8 rounded-full flex items-center justify-center z-10 border-2 transition-colors ${isCompleted ? 'bg-green-500 border-green-500 text-white shadow-sm' :
+                            isFailed ? 'bg-red-500 border-red-500 text-white shadow-sm' :
+                              isCurrent ? 'bg-white border-blue-500 text-blue-500 shadow-md ring-4 ring-blue-50' :
+                                'bg-white border-slate-200 text-slate-300'
+                          }`}>
                           {isCompleted ? <CheckCircle2 size={16} strokeWidth={3} /> :
-                           isFailed ? <X size={14} strokeWidth={3} /> :
-                           <Circle size={10} fill="currentColor" />}
+                            isFailed ? <X size={14} strokeWidth={3} /> :
+                              <Circle size={10} fill="currentColor" />}
                         </div>
-                        
+
                         {/* Content */}
                         <div className={`flex flex-col pt-1 ${isUpcoming ? 'opacity-50' : ''}`}>
-                          <span className={`text-[15px] font-bold ${
-                            isCompleted ? 'text-slate-800' : 
-                            isCurrent ? 'text-blue-700' : 
-                            'text-slate-500'
-                          }`}>
+                          <span className={`text-[15px] font-bold ${isCompleted ? 'text-slate-800' :
+                              isCurrent ? 'text-blue-700' :
+                                'text-slate-500'
+                            }`}>
                             {item.step}
                           </span>
                           {item.time && (
@@ -753,8 +802,8 @@ Please check your email for detailed information or contact us if you have any q
                 {/* ─── AGENT ASSIGNMENT PANEL (only when approved + paid) ─── */}
                 {selectedStudent.status === "approved" &&
                   selectedStudent.payment === "Paid" && (
-                  <AgentAssignmentPanel application={selectedStudent} />
-                )}
+                    <AgentAssignmentPanel application={selectedStudent} />
+                  )}
               </div>
             </div>
           </div>
@@ -810,11 +859,10 @@ Please check your email for detailed information or contact us if you have any q
                 <button
                   onClick={handleRejectConfirm}
                   disabled={!rejectionReason.trim()}
-                  className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition ${
-                    rejectionReason.trim()
+                  className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition ${rejectionReason.trim()
                       ? "bg-red-600 text-white hover:bg-red-700 shadow-lg"
                       : "bg-red-200 text-red-400 cursor-not-allowed"
-                  }`}
+                    }`}
                 >
                   <XCircle size={18} /> Confirm Rejection
                 </button>
@@ -823,7 +871,7 @@ Please check your email for detailed information or contact us if you have any q
           </div>
         </div>
       )}
-      
+
       {/* --- APPROVING PRICING MODAL --- */}
       {approvingStudent && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
@@ -871,11 +919,10 @@ Please check your email for detailed information or contact us if you have any q
                 <button
                   onClick={handleApproveConfirm}
                   disabled={!servicePrice || Number(servicePrice) <= 0}
-                  className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition ${
-                    servicePrice && Number(servicePrice) > 0
+                  className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition ${servicePrice && Number(servicePrice) > 0
                       ? "bg-green-600 text-white hover:bg-green-700 shadow-lg"
                       : "bg-green-200 text-green-400 cursor-not-allowed"
-                  }`}
+                    }`}
                 >
                   <CheckCircle size={18} /> Confirm Approval
                 </button>
@@ -929,11 +976,10 @@ Please check your email for detailed information or contact us if you have any q
                 <button
                   onClick={handleRequestChanges}
                   disabled={!exactProblem.trim()}
-                  className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition ${
-                    exactProblem.trim()
+                  className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition ${exactProblem.trim()
                       ? "bg-yellow-500 text-white hover:bg-yellow-600 shadow-lg"
                       : "bg-yellow-200 text-white cursor-not-allowed"
-                  }`}
+                    }`}
                 >
                   <Send size={18} /> Send Request
                 </button>

@@ -37,16 +37,23 @@ const DeliveryManagement = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const sendCourierEmail = async () => {
-    try {
-      await sendCourierEmailAPI(
-        selectedTracking.email,
-        selectedTracking.id,
-        selectedTracking.courierPartner
-      );
-    } catch (error) {
-      console.log(error);
-    }
+  const sendCourierEmail = () => {
+    if (!selectedTracking) return;
+
+    const subject = encodeURIComponent(`Shipment Update: ${selectedTracking.id}`);
+    const body = encodeURIComponent(`Dear ${selectedTracking.student},
+
+Here is an update regarding your shipment:
+
+Courier Partner: ${selectedTracking.courierPartner}
+Tracking ID: ${selectedTracking.id}
+Status: ${selectedTracking.status}
+Expected Delivery: ${selectedTracking.estDelivery}
+
+Best regards,
+100 Transcripts Logistics Team`);
+
+    window.location.href = `mailto:${selectedTracking.email}?subject=${subject}&body=${body}`;
   };
 
   const sendWhatsAppMessage = () => {
