@@ -17,8 +17,18 @@ export default function AgentLogin() {
       const res = await agentLogin(email, password);
       if (res.ok) {
         localStorage.setItem("agent", JSON.stringify(res.data.data));
-        // Also set user with type=agent for route guard
-        localStorage.setItem("user", JSON.stringify({ type: "agent", data: res.data.data }));
+        localStorage.setItem("agentUser", JSON.stringify(res.data.data));
+
+        // NOTE: do NOT write to the "user" key here. adminHeaders() in
+        // services/api.js reads the admin's signed token from "user".token —
+        // writing an agent session to that same key silently wipes out
+        // whatever admin was logged in on this browser (401 AUTH_REQUIRED on
+        // every admin-protected endpoint, e.g. /api/admin/agent-support/...).
+        // Agent and Admin sessions must stay on separate localStorage keys.
+
+        if (res.data.token) {
+          localStorage.setItem("agent_token", res.data.token);   // ✅ matches what AgentAdminMessages.jsx and useAgentWebSocket.js read
+        }
         navigate("/agent/dashboard");
       } else {
         setError(res.data?.error || "Login failed");

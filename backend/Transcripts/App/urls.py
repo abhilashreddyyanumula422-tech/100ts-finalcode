@@ -107,12 +107,12 @@ urlpatterns = [
     path("admin/applications/<int:app_id>/assignment/", views_agent.admin_application_assignment, name="admin-app-assignment"),
     path("admin/agent-assignments/", views_agent.admin_all_assignments, name="admin-all-assignments"),
     path("admin/agent-support/all-conversations/", views_agent.admin_all_conversations, name="admin-all-conversations"),
-    path("admin/agent-support/general/<int:agent_id>/", views_agent.admin_general_messages, name="admin-general-messages"),
+  
 
     # Agent — Work Dashboard (stats, today's tasks, visits, delivery, activity)
     path("agent/<int:agent_id>/dashboard/", views_agent.agent_dashboard, name="agent-dashboard"),
     path("agent/<int:agent_id>/admin-messages/<int:app_id>/", views_agent.agent_admin_messages, name="agent-admin-messages"),
-    path("agent/<int:agent_id>/admin-messages/general/", views_agent.agent_general_messages, name="agent-general-messages"),
+  
     path("agent/<int:agent_id>/admin-messages/unread-count/", views_agent.agent_unread_messages_count, name="agent-unread-count"),
     path("agent/<int:agent_id>/assignment/<int:assignment_id>/start-delivery/", views_agent.agent_start_delivery, name="agent-start-delivery"),
 

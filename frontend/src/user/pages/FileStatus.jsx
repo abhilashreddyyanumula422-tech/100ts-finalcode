@@ -1,14 +1,13 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
-import { FiFileText, FiClock, FiShield, FiTruck, FiCheckCircle } from "react-icons/fi";
-import { Search, Package, CheckCircle2, ExternalLink, Download, Truck, AlertTriangle, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  FiFileText, FiClock, FiShield, FiTruck, FiCheckCircle,
+  FiSearch, FiExternalLink, FiDownload, FiAlertTriangle, FiX,
+  FiPackage, FiInfo, FiMessageCircle, FiMail, FiChevronRight,
+  FiFile
+} from "react-icons/fi";
 import { getApplicationStatus, acknowledgeDelivery } from "../../services/api";
 import { useNavigate, useLocation } from "react-router-dom";
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0 },
-};
 
 const STATUS_STEP_MAP = {
   pending_approval: 0,
@@ -32,14 +31,8 @@ const STATUS_LABEL_MAP = {
   changes_requested: "Changes Requested",
   processing: "Processing",
   out_for_delivery: "Out for Delivery",
-  completed: "Delivered / Completed",
+  completed: "Delivered",
   rejected: "Rejected",
-};
-
-const COURIER_LINKS = {
-  Shiprocket: "https://shiprocket.co/tracking/",
-  Delhivery: "https://www.delhivery.com/track/package/",
-  BlueDart: "https://www.bluedart.com/tracking?trackFor=0&trackNo=",
 };
 
 const FileStatus = () => {
@@ -53,12 +46,12 @@ const FileStatus = () => {
   const [ackLoading, setAckLoading] = useState(false);
 
   const steps = [
-    { id: 0, label: "Application", desc: "File Opened", icon: <FiFileText /> },
-    { id: 1, label: "Payment", desc: "Fee Confirmed", icon: <FiClock /> },
-    { id: 2, label: "Approved", desc: "Admin Review", icon: <FiShield /> },
-    { id: 3, label: "University", desc: "Verification", icon: <FiShield /> },
-    { id: 4, label: "Dispatched", desc: "On the Way", icon: <FiTruck /> },
-    { id: 5, label: "Delivered", desc: "Arrived", icon: <FiCheckCircle /> },
+    { id: 0, label: "Application" },
+    { id: 1, label: "Payment" },
+    { id: 2, label: "Approved" },
+    { id: 3, label: "Verification" },
+    { id: 4, label: "Dispatched" },
+    { id: 5, label: "Delivered" },
   ];
 
   const handleSearch = async (e) => {
@@ -96,7 +89,6 @@ const FileStatus = () => {
   const courierPartner = statusData?.courier_partner;
   const trackingId = statusData?.agent_tracking_id;
   const trackingUrl = statusData?.tracking_url;
-  const decision = statusData?.decision;
   const isRejected = statusData?.status === "rejected";
 
   const handleAcknowledge = async () => {
@@ -114,404 +106,261 @@ const FileStatus = () => {
   };
 
   return (
-    <div className="bg-[#f8fafc] min-h-screen pt-20">
-
-      {/* HEADER SECTION */}
-      <motion.section
-        className="relative overflow-hidden bg-white py-12 px-6 text-center shadow-sm"
-        initial="hidden"
-        animate="visible"
-        variants={fadeUp}
-      >
-        <div className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none">
-          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-300 rounded-full blur-[120px]"></div>
-          <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-blue-500 rounded-full blur-[100px]"></div>
-        </div>
-
-        <div className="relative z-10 max-w-4xl mx-auto space-y-6">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-50 border border-blue-100 rounded-full text-blue-600 font-black uppercase text-[10px] tracking-[0.2em]">
-            Live Tracking
+    <>
+      <style dangerouslySetInnerHTML={{__html: `
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        .font-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
+      `}} />
+      <div className="min-h-screen bg-gradient-to-b from-[#f0f9ff] to-white text-slate-800 font-jakarta selection:bg-blue-100 pt-28 pb-32">
+        
+        <div className="max-w-4xl mx-auto px-6">
+          {/* HEADER SECTION */}
+          <div className="text-center mb-12">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
+              Track Your <span className="text-blue-600">Appli</span><span className="text-cyan-500">cation</span>
+            </h1>
+            <p className="text-slate-500 text-lg font-medium max-w-lg mx-auto">
+              Enter your tracking ID below to check the current status of your documents.
+            </p>
           </div>
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-slate-800 tracking-tight leading-tight">
-            Track Your <span className="text-blue-600">Application</span>
-          </h1>
-          <p className="text-slate-500 text-base md:text-lg font-medium max-w-2xl mx-auto leading-relaxed">
-            Enter your Application ID or Tracking ID to see exactly where your papers are.
-          </p>
-        </div>
-      </motion.section>
 
-      <div className="max-w-7xl mx-auto px-6 py-16">
+          {/* SEARCH BOX */}
+          <div className="max-w-2xl mx-auto mb-16">
+            <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                  <FiSearch className="w-5 h-5" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="e.g. TRK123456"
+                  value={fileId}
+                  onChange={(e) => setFileId(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-xl outline-none text-slate-800 font-semibold transition-all focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/10 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)]"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white px-8 py-4 rounded-xl font-bold transition-all disabled:opacity-70 shadow-lg shadow-cyan-500/20 whitespace-nowrap"
+              >
+                {loading ? "Searching..." : "Track Status"}
+              </button>
+            </form>
 
-        {/* SEARCH BOX */}
-        <motion.div
-          className="max-w-3xl mx-auto -mt-16 relative z-30 mb-20"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <form onSubmit={handleSearch} className="relative group">
-            <input
-              type="text"
-              placeholder="Enter Application ID (e.g. 100T-00123)"
-              value={fileId}
-              onChange={(e) => setFileId(e.target.value)}
-              className="w-full bg-white p-6 md:p-10 pr-40 rounded-[2.5rem] shadow-2xl border-2 border-slate-50 outline-none focus:border-blue-500 transition-all font-black text-slate-800 md:text-2xl placeholder:text-slate-300"
-            />
-            <button
-              type="submit"
-              disabled={loading}
-              className="absolute right-3 top-3 bottom-3 bg-blue-600 text-white px-10 rounded-[2rem] font-black hover:bg-blue-700 transition-all flex items-center justify-center gap-3 active:scale-95 shadow-xl shadow-blue-600/20 disabled:opacity-60"
+            <AnimatePresence>
+              {notFound && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-4"
+                >
+                  <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-lg text-sm font-medium flex items-center gap-2">
+                    <FiAlertTriangle className="flex-shrink-0" /> Application not found. Please check your tracking ID.
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* STATUS RESULTS */}
+          {statusData && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
             >
-              <span className="hidden sm:inline text-lg">{loading ? "Searching..." : "Track"}</span>
-              <Search className="w-6 h-6" />
-            </button>
-          </form>
+              
+              {/* ACTION REQUIRED BANNER */}
+              {statusData.active_issue && (
+                <div className={`p-6 rounded-2xl border ${
+                  statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN'
+                    ? 'bg-red-50 border-red-200 text-red-900'
+                    : 'bg-amber-50 border-amber-200 text-amber-900'
+                }`}>
+                  <div className="flex items-start gap-4">
+                    <div className="mt-1">
+                      <FiAlertTriangle className={`w-6 h-6 ${
+                        statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN' ? 'text-red-600' : 'text-amber-600'
+                      }`} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-lg mb-1">
+                        {statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN' ? 'Action Required' : 'Waiting for Review'}
+                      </h3>
+                      <p className="text-sm opacity-90 mb-4">{statusData.active_issue.message}</p>
+                      
+                      {(statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN') && (
+                        <button
+                          onClick={() => navigate("/apply", { state: { editApplication: true, appData: statusData } })}
+                          className="bg-red-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-red-700 transition"
+                        >
+                          Resolve Issue
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
-          {notFound && (
-            <div className="mt-4 bg-red-50 border border-red-200 rounded-2xl px-5 py-4 flex items-center gap-3">
-              <AlertTriangle className="text-red-500 flex-shrink-0" size={20} />
-              <p className="text-sm text-red-700 font-semibold">Application not found. Please check your ID and try again.</p>
+              {/* MAIN STATUS CARD */}
+              <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-8">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wide ${
+                        isRejected ? "bg-red-100 text-red-700" :
+                        isDelivered ? "bg-emerald-100 text-emerald-700" :
+                        "bg-blue-50 text-blue-700"
+                      }`}>
+                        {isRejected ? "Rejected" : isDelivered ? "Delivered" : "Processing"}
+                      </span>
+                      <span className="text-slate-400 text-sm font-medium">#{statusData.application_id || trackingId || "—"}</span>
+                    </div>
+                    <h2 className="text-3xl font-extrabold text-slate-900">
+                      {STATUS_LABEL_MAP[statusData.status] || statusData.status}
+                    </h2>
+                  </div>
+                  
+                  <div className="text-left sm:text-right">
+                    <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide mb-1">Applicant</p>
+                    <p className="font-bold text-slate-900">{statusData.fullName || "—"}</p>
+                    {statusData.university && (
+                      <p className="text-sm text-slate-500 font-medium mt-1">{statusData.university}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* PROGRESS TIMELINE */}
+                {!isRejected && (
+                  <div className="mt-12 mb-4">
+                    <div className="relative flex justify-between">
+                      <div className="absolute top-4 left-4 right-4 h-[2px] bg-slate-100"></div>
+                      <div 
+                        className="absolute top-4 left-4 h-[2px] bg-blue-600 transition-all duration-700 ease-out"
+                        style={{ width: `calc(${Math.min(((currentStep) / (steps.length - 1)) * 100, 100)}% - 2rem)` }}
+                      ></div>
+
+                      {steps.map((step, i) => {
+                        const isDone = i < currentStep;
+                        const isCurrent = i === currentStep;
+                        return (
+                          <div key={i} className="relative z-10 flex flex-col items-center group w-16">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 bg-white transition-all duration-300 ${
+                              isDone ? 'border-blue-600 text-blue-600' :
+                              isCurrent ? 'border-blue-600 text-blue-600 ring-4 ring-blue-50' :
+                              'border-slate-200 text-slate-400'
+                            }`}>
+                              {isDone ? <FiCheckCircle className="w-4 h-4" /> : (i + 1)}
+                            </div>
+                            <span className={`mt-3 text-xs font-semibold text-center transition-colors ${
+                              isCurrent || isDone ? 'text-slate-800' : 'text-slate-400'
+                            }`}>
+                              {step.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* DELIVERY DETAILS */}
+                {(isOutForDelivery || isDelivered) && (
+                  <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+                    <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                      <FiTruck className="text-slate-400" /> Delivery Information
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-xs text-slate-500 font-semibold">Courier</p>
+                        <p className="font-medium text-slate-900">{courierPartner || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-semibold">Tracking ID</p>
+                        <p className="font-mono text-sm bg-slate-50 border border-slate-100 px-2 py-1 rounded inline-block mt-1 text-slate-800">
+                          {trackingId || "—"}
+                        </p>
+                      </div>
+                      {trackingUrl && (
+                        <a
+                          href={trackingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700"
+                        >
+                          Track on Courier Website <FiExternalLink />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* DIGITAL COPIES */}
+                {(isDelivered || (statusData.documents && statusData.documents.length > 0)) && (
+                  <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm md:col-span-1">
+                    <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                      <FiFile className="text-slate-400" /> Digital Documents
+                    </h3>
+                    <div className="flex flex-col gap-2">
+                      {statusData.documents?.map((doc, idx) => (
+                        <a
+                          key={doc.id || idx}
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-3 border border-slate-100 rounded-xl hover:bg-slate-50 hover:border-slate-200 transition-colors group"
+                        >
+                          <span className="flex items-center gap-3 text-sm font-medium text-slate-700">
+                            <FiFileText className="text-slate-400" />
+                            <span className="truncate max-w-[200px]">{doc.name || `Document ${idx + 1}`}</span>
+                          </span>
+                          <FiDownload className="text-slate-400 group-hover:text-blue-600 transition-colors" />
+                        </a>
+                      ))}
+                      {(!statusData.documents || statusData.documents.length === 0) && (
+                        <p className="text-sm text-slate-500 italic">No documents available yet.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+            </motion.div>
+          )}
+        </div>
+
+        {/* ACKNOWLEDGEMENT MODAL */}
+        <AnimatePresence>
+          {showAckModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-xl relative text-center"
+              >
+                <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <FiCheckCircle size={32} />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">Delivery Complete</h2>
+                <p className="text-slate-500 mb-8 text-sm">Please confirm you have received your documents to finalize this process.</p>
+                <button
+                  onClick={handleAcknowledge}
+                  disabled={ackLoading}
+                  className="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-70"
+                >
+                  {ackLoading ? "Confirming..." : "Acknowledge Delivery"}
+                </button>
+              </motion.div>
             </div>
           )}
-        </motion.div>
-
-        {/* STATUS VISUALIZER */}
-        {statusData && (
-          <motion.div
-            className="space-y-12"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            {statusData.active_issue && (
-              <div className={`p-8 rounded-[2rem] border shadow-sm mb-6 ${
-                statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN'
-                  ? 'bg-red-50 border-red-200 text-red-900'
-                  : 'bg-amber-50 border-amber-200 text-amber-900'
-              }`}>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-lg">
-                    {statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN' ? '🔴' : '🟡'}
-                  </span>
-                  <h3 className={`text-base font-black uppercase tracking-widest ${
-                    statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN' ? 'text-red-800' : 'text-amber-800'
-                  }`}>
-                    {statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN' ? 'Action Required' : 'Waiting for Agent Review'}
-                  </h3>
-                </div>
-                
-                <p className="text-sm font-medium mb-4">
-                  {statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN'
-                    ? `Agent raised an issue: "${statusData.active_issue.message}"`
-                    : 'Your correction has been submitted and is waiting for agent review.'
-                  }
-                </p>
-
-                {statusData.active_issue.required_documents && statusData.active_issue.required_documents.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Your agent needs:</p>
-                    <ul className="list-disc pl-5 text-sm font-semibold text-slate-800 space-y-1">
-                      {statusData.active_issue.required_documents.map((doc, idx) => (
-                        <li key={idx}>{doc}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {(statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN') && (
-                  <button
-                    onClick={() => navigate("/apply", { state: { editApplication: true, appData: statusData } })}
-                    className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm transition shadow-sm"
-                  >
-                    ✏️ Edit & Correct
-                  </button>
-                )}
-
-                {statusData.agent_details && (
-                  <div className="mt-4 flex gap-3 flex-wrap items-center pt-4 border-t border-dashed border-slate-200">
-                    <span className={`text-xs font-bold ${
-                      statusData.active_issue.status === 'WAITING_FOR_USER' || statusData.active_issue.status === 'OPEN' ? 'text-red-700' : 'text-amber-700'
-                    }`}>Direct Support:</span>
-                    
-                    <a
-                      href={`https://wa.me/${statusData.agent_details.mobile.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${statusData.agent_details.name}, regarding my application (ID: ${statusData.application_id}), I am updating the requested details.`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs transition shadow-sm"
-                    >
-                      💬 WhatsApp Agent
-                    </a>
-
-                    <a
-                      href={`mailto:${statusData.agent_details.email}?subject=Correction%20Update%20-%20ID%20${statusData.application_id}&body=Hi%20${statusData.agent_details.name},%20I%20have%20updated%20the%20details%20as%20requested.`}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs transition shadow-sm"
-                    >
-                      ✉️ Email Agent
-                    </a>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Summary Card */}
-            <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 blur-3xl opacity-50" />
-              <div className="space-y-3 text-center md:text-left relative z-10">
-                <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                  isRejected ? "bg-red-50 text-red-600" :
-                  isDelivered ? "bg-emerald-50 text-emerald-600" :
-                  "bg-blue-50 text-blue-600"
-                }`}>
-                  {isRejected ? "❌ Rejected" : isDelivered ? "✅ Delivered" : "🔄 In Progress"}
-                </span>
-                <h3 className="text-3xl md:text-5xl font-black text-slate-800 tracking-tight">
-                  {STATUS_LABEL_MAP[statusData.status] || statusData.status}
-                </h3>
-                <div className="flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-2 pt-2">
-                  <p className="text-slate-400 font-bold text-sm">
-                    Applicant: <span className="text-slate-700">{statusData.fullName || "—"}</span>
-                  </p>
-                  {statusData.university && (
-                    <p className="text-slate-400 font-bold text-sm">
-                      University: <span className="text-slate-700">{statusData.university}</span>
-                    </p>
-                  )}
-                </div>
-                {statusData.admin_message && (
-                  <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                    <p className="flex-1 text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 font-semibold flex items-center shadow-sm">
-                      📋 Admin Note: {statusData.admin_message}
-                    </p>
-                    {['changes_requested', 'rejected', 'pending'].includes(String(statusData.status).toLowerCase()) && (
-                      <button 
-                        onClick={() => navigate("/apply", { state: { editApplication: true, appData: statusData } })}
-                        className="self-start sm:self-stretch px-5 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-sm transition shadow flex items-center justify-center gap-2 whitespace-nowrap"
-                      >
-                        ✏️ Edit Documents
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="w-24 h-24 bg-blue-50 text-blue-600 rounded-[2rem] flex items-center justify-center shadow-inner border border-blue-100">
-                <Package className="w-10 h-10" />
-              </div>
-            </div>
-
-            {/* Delivery Tracking Card (visible when out for delivery or delivered) */}
-            {(isOutForDelivery || isDelivered) && (
-              <div className="bg-white p-8 rounded-[2rem] shadow-xl border border-slate-100">
-                <h3 className="text-lg font-black text-slate-800 flex items-center gap-2 mb-5">
-                  <Truck className="text-blue-600" size={22} /> Delivery Details
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <p className="text-xs text-slate-400 font-bold uppercase mb-1">Courier Partner</p>
-                    <p className="text-base font-bold text-slate-800">{courierPartner || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-400 font-bold uppercase mb-1">Tracking ID</p>
-                    <p className="text-base font-bold text-slate-800 font-mono">{trackingId || "—"}</p>
-                  </div>
-                  <div>
-                    {trackingUrl ? (
-                      <a
-                        href={trackingUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition shadow"
-                      >
-                        <ExternalLink size={16} /> Track on Courier Site
-                      </a>
-                    ) : (
-                      <p className="text-sm text-slate-400">Tracking link will appear here once available.</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* University Decision Banner */}
-            {decision && decision.decision === "REJECTED" && (
-              <div className="bg-red-50 border border-red-200 p-8 rounded-[2rem] shadow">
-                <h3 className="text-lg font-black text-red-800 flex items-center gap-2 mb-4">
-                  <AlertTriangle size={22} className="text-red-600" /> University Rejected Application
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs text-red-400 font-bold uppercase mb-1">Rejection Reason</p>
-                    <p className="text-base font-bold text-red-900">{decision.rejection_reason || "Not specified"}</p>
-                  </div>
-                  {decision.remarks && (
-                    <div>
-                      <p className="text-xs text-red-400 font-bold uppercase mb-1">Remarks</p>
-                      <p className="text-sm font-medium text-red-800">{decision.remarks}</p>
-                    </div>
-                  )}
-                  {decision.rejection_letter_url && (
-                    <div>
-                      <a href={decision.rejection_letter_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-5 py-3 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition shadow">
-                        <Download size={16} /> Download Rejection Letter
-                      </a>
-                    </div>
-                  )}
-                  <div className="pt-4 mt-4 border-t border-red-200/60 flex gap-3">
-                     <button className="px-5 py-2.5 bg-red-100 text-red-700 rounded-xl font-bold text-sm hover:bg-red-200 transition">Upload Corrected Documents</button>
-                     <button className="px-5 py-2.5 bg-red-100 text-red-700 rounded-xl font-bold text-sm hover:bg-red-200 transition">Resubmit Application</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {decision && decision.decision === "ADDITIONAL_DOCS" && (
-              <div className="bg-amber-50 border border-amber-200 p-8 rounded-[2rem] shadow">
-                <h3 className="text-lg font-black text-amber-800 flex items-center gap-2 mb-4">
-                  <FileText size={22} className="text-amber-600" /> Additional Documents Required
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs text-amber-500 font-bold uppercase mb-1">Required Documents</p>
-                    <p className="text-sm font-medium text-amber-900 whitespace-pre-wrap">{decision.required_documents}</p>
-                  </div>
-                  {decision.deadline && (
-                    <div>
-                      <p className="text-xs text-amber-500 font-bold uppercase mb-1">Submission Deadline</p>
-                      <p className="text-base font-bold text-amber-900">{new Date(decision.deadline).toLocaleDateString()}</p>
-                    </div>
-                  )}
-                  {decision.remarks && (
-                    <div>
-                      <p className="text-xs text-amber-500 font-bold uppercase mb-1">Remarks</p>
-                      <p className="text-sm font-medium text-amber-800">{decision.remarks}</p>
-                    </div>
-                  )}
-                  <div className="pt-4 mt-4 border-t border-amber-200/60">
-                     <button className="px-5 py-2.5 bg-amber-600 text-white rounded-xl font-bold text-sm hover:bg-amber-700 transition shadow">Upload Missing Documents</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Download digital copy (when delivered/completed or uploaded by agent) */}
-            {(isDelivered || (statusData.documents && statusData.documents.length > 0)) && (
-              <div className="bg-emerald-50 border border-emerald-200 p-8 rounded-[2rem] shadow">
-                <h3 className="text-lg font-black text-emerald-800 flex items-center gap-2 mb-4">
-                  <Download size={22} className="text-emerald-600" /> Download Your Documents
-                </h3>
-                <div className="flex flex-col gap-3">
-                  {statusData.documents.map((doc, idx) => (
-                    <a
-                      key={doc.id || idx}
-                      href={doc.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 bg-white border border-emerald-200 px-5 py-3 rounded-xl font-semibold text-emerald-700 hover:bg-emerald-50 transition shadow-sm"
-                    >
-                      <Download size={16} /> {doc.name || `Document ${idx + 1}`}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Progress Steps */}
-            {!isRejected && (
-              <div className="relative pt-24 pb-12 overflow-x-auto hide-scrollbar">
-                <div className="min-w-[800px] sm:min-w-0">
-                  {/* Connector Line */}
-                  <div className="absolute top-[116px] left-[10%] right-[10%] h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(((currentStep) / (steps.length - 1)) * 100, 100)}%` }}
-                      transition={{ duration: 1.5, ease: "circOut" }}
-                    />
-                  </div>
-
-                  <div className="relative z-10 flex justify-between px-4 sm:px-0">
-                    {steps.map((step, i) => {
-                      const isDone = i < currentStep;
-                      const isCurrent = i === currentStep;
-                      return (
-                        <div key={i} className={`flex flex-col items-center text-center transition-all duration-700 w-40 ${!isDone && !isCurrent ? "opacity-30" : "opacity-100"}`}>
-                          <div className={`w-20 h-20 md:w-24 md:h-24 rounded-[2rem] flex items-center justify-center shadow-2xl transition-all duration-700 relative ${
-                            isDone ? "bg-blue-600 text-white" :
-                            isCurrent ? "bg-slate-800 text-white ring-8 ring-blue-50 scale-110" :
-                            "bg-white text-slate-300"
-                          }`}>
-                            {isDone ? <CheckCircle2 className="w-8 h-8 md:w-10 md:h-10" /> : React.cloneElement(step.icon, { size: 32 })}
-                            {isCurrent && (
-                              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-full font-black animate-bounce shadow-lg">
-                                ACTIVE
-                              </div>
-                            )}
-                          </div>
-                          <h4 className="font-black text-slate-800 mt-6 mb-1 text-sm md:text-base uppercase tracking-tight">{step.label}</h4>
-                          <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase">{step.desc}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Rejection banner */}
-            {isRejected && (
-              <div className="bg-red-50 border border-red-200 p-8 rounded-[2rem] text-center">
-                <p className="text-2xl font-black text-red-700 mb-2">❌ Application Rejected</p>
-                <p className="text-slate-600 text-sm">
-                  {statusData.rejection_reason || statusData.admin_message || "Please contact support for more information."}
-                </p>
-              </div>
-            )}
-          </motion.div>
-        )}
+        </AnimatePresence>
       </div>
-
-      {/* WHATSAPP FLOATING */}
-      <a
-        href="https://wa.me/919941991402"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-8 right-8 z-50 bg-emerald-500 text-white p-4 rounded-full shadow-2xl hover:bg-emerald-600 transition-all hover:scale-110 active:scale-95"
-      >
-        <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
-        </svg>
-      </a>
-
-      {/* ACKNOWLEDGEMENT MODAL */}
-      {showAckModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative text-center"
-          >
-            <button
-              onClick={() => setShowAckModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition"
-            >
-              <X size={24} />
-            </button>
-            <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 size={40} />
-            </div>
-            <h2 className="text-2xl font-black text-slate-800 mb-2">Delivery Completed</h2>
-            <p className="text-slate-600 mb-8 font-medium">Successfully delivered. I am happy.</p>
-            <button
-              onClick={handleAcknowledge}
-              disabled={ackLoading}
-              className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition active:scale-95 disabled:opacity-70"
-            >
-              {ackLoading ? "Confirming..." : "OK"}
-            </button>
-          </motion.div>
-        </div>
-      )}
-    </div>
+    </>
   );
 };
 

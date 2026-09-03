@@ -303,7 +303,15 @@ export const getAgentToken = () => localStorage.getItem(AGENT_TOKEN_KEY) || "";
 export const clearAgentSession = () => {
   localStorage.removeItem(AGENT_TOKEN_KEY);
   localStorage.removeItem("agent");
-  localStorage.removeItem("user");
+  localStorage.removeItem("agentUser");
+  try {
+    const u = JSON.parse(localStorage.getItem("user") || "null");
+    if (u?.type === "agent") {
+      localStorage.removeItem("user");
+    }
+  } catch {
+    // ignore
+  }
 };
 
 const agentHeaders = (extra = {}) => {
@@ -367,6 +375,50 @@ const agentPost = (endpoint, body = {}) => agentRequest(endpoint, { method: "POS
 const agentUpload = (endpoint, formData) =>
   agentRequest(endpoint, { method: "POST", body: formData, isForm: true });
 
+// ── Admin auth header ──
+// Mirrors agentHeaders/agentRequest above. Admin login stores its
+// token under the "user" key: { type: "admin", data, token }.
+const adminHeaders = (extra = {}) => {
+  let token = "";
+  try {
+    token = JSON.parse(localStorage.getItem("user") || "{}")?.token || "";
+  } catch {
+    token = "";
+  }
+  return token ? { ...extra, Authorization: `Token ${token}` } : extra;
+};
+
+const adminRequest = async (endpoint, { method = "GET", body, isForm = false } = {}) => {
+  try {
+    const options = { method, headers: adminHeaders(isForm ? {} : { "Content-Type": "application/json" }) };
+    if (body !== undefined) options.body = isForm ? body : JSON.stringify(body);
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+
+    let data;
+    const raw = await response.text();
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      data = { error: describeNonJson(response.status, endpoint) };
+    }
+
+    return { ok: response.ok, data, status: response.status };
+  } catch (error) {
+    console.error("Admin API Error:", endpoint, error);
+    return {
+      ok: false,
+      status: 0,
+      data: { error: `Cannot reach the backend at ${API_BASE_URL}. Is the Django server running?` },
+    };
+  }
+};
+
+const adminGet = (endpoint) => adminRequest(endpoint);
+const adminPost = (endpoint, body = {}) => adminRequest(endpoint, { method: "POST", body });
+const adminPut = (endpoint, body = {}) => adminRequest(endpoint, { method: "PUT", body });
+const adminDelete = (endpoint) => adminRequest(endpoint, { method: "DELETE" });
+
 // ── Auth ──
 export const agentLogin = async (email, password) => {
   const res = await apiPost("/api/agent/login/", { email, password });
@@ -374,23 +426,23 @@ export const agentLogin = async (email, password) => {
   return res;
 };
 
-// ── Admin — Agent CRUD (admin endpoints, not agent-scoped) ──
-export const getAgents = () => apiGet("/api/admin/agents/");
-export const createAgent = (data) => apiPost("/api/admin/agents/", data);
-export const updateAgent = (id, data) => apiPut(`/api/admin/agents/${id}/`, data);
-export const deleteAgent = (id) => apiDelete(`/api/admin/agents/${id}/`);
-export const toggleAgent = (id) => apiPost(`/api/admin/agents/${id}/toggle/`, {});
+// ── Admin — Agent CRUD (admin-only; requires the signed admin token) ──
+export const getAgents = () => adminGet("/api/admin/agents/");
+export const createAgent = (data) => adminPost("/api/admin/agents/", data);
+export const updateAgent = (id, data) => adminPut(`/api/admin/agents/${id}/`, data);
+export const deleteAgent = (id) => adminDelete(`/api/admin/agents/${id}/`);
+export const toggleAgent = (id) => adminPost(`/api/admin/agents/${id}/toggle/`, {});
 
-// ── Admin — Assignment ──
+// ── Admin — Assignment (admin-only; requires the signed admin token) ──
 export const getEligibleAgents = (appId) =>
-  apiGet(`/api/admin/applications/${appId}/eligible-agents/`);
+  adminGet(`/api/admin/applications/${appId}/eligible-agents/`);
 export const assignAgent = (appId, agentId) =>
-  apiPost(`/api/admin/applications/${appId}/assign-agent/`, { agent_id: agentId });
+  adminPost(`/api/admin/applications/${appId}/assign-agent/`, { agent_id: agentId });
 export const autoAssignAgent = (appId) =>
-  apiPost(`/api/admin/applications/${appId}/auto-assign/`, {});
+  adminPost(`/api/admin/applications/${appId}/auto-assign/`, {});
 export const getApplicationAssignment = (appId) =>
-  apiGet(`/api/admin/applications/${appId}/assignment/`);
-export const getAllAssignments = () => apiGet("/api/admin/agent-assignments/");
+  adminGet(`/api/admin/applications/${appId}/assignment/`);
+export const getAllAssignments = () => adminGet("/api/admin/agent-assignments/");
 
 
 // ─────────────────────────────────────────────────────────────

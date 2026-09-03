@@ -17,8 +17,10 @@ export default function DeliveryLogin() {
       const res = await agentLogin(email, password);
       if (res.ok) {
         localStorage.setItem("agent", JSON.stringify(res.data.data));
-        // Also set user with type=agent for route guard
-        localStorage.setItem("user", JSON.stringify({ type: "agent", data: res.data.data }));
+        localStorage.setItem("agentUser", JSON.stringify(res.data.data));
+        if (res.data.token) {
+          localStorage.setItem("agent_token", res.data.token);
+        }
         navigate("/agent/dashboard");
       } else {
         setError(res.data?.error || "Login failed");

@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -19,18 +22,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-_qb@%u)m*q4h+9mp2h8vp#tw7v_*p9-yl^gk4&wmsi)p8vlfa1'
+SECRET_KEY = 'django-insecure-_qb@%u)m*q4h+9mp2h8vp2h8vp#tw7v_*p9-yl^gk4&wmsi)p8vlfa'
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
 
+# ---------------------------------------------------------
 # Application definition
+# ---------------------------------------------------------
 
 INSTALLED_APPS = [
+    'daphne',                         
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -40,8 +44,12 @@ INSTALLED_APPS = [
     'App',
     'rest_framework',
     'corsheaders',
+    'channels',
 ]
+
 CORS_ALLOW_ALL_ORIGINS = True
+
+
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -53,7 +61,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+
 ROOT_URLCONF = 'Transcripts.urls'
+
 
 TEMPLATES = [
     {
@@ -70,11 +80,17 @@ TEMPLATES = [
     },
 ]
 
+
 WSGI_APPLICATION = 'Transcripts.wsgi.application'
 
 
+# Channels ASGI application
+ASGI_APPLICATION = 'Transcripts.asgi.application'
+
+
+# ---------------------------------------------------------
 # Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+# ---------------------------------------------------------
 
 DATABASES = {
     'default': {
@@ -82,6 +98,7 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
 
 # DATABASES = {
 #     'default': {
@@ -94,42 +111,122 @@ DATABASES = {
 #     }
 # }
 
-# For development - uncomment to log emails to console instead of sending
-# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
+# ---------------------------------------------------------
+# Environment
+# ---------------------------------------------------------
 
-import os
-from pathlib import Path
-from dotenv import load_dotenv
-
-BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR.parent / ".env")
 
-# WhatsApp Interakt API Configuration
-WHATSAPP_ENABLED = os.getenv("WHATSAPP_ENABLED", "False").lower() in ("true", "1", "t")
-INTERAKT_SECRET_KEY = os.getenv("INTERAKT_SECRET_KEY", "")
-INTERAKT_BASE_URL = os.getenv("INTERAKT_BASE_URL", "https://api.interakt.ai/v1/public/message/")
-INTERAKT_TEMPLATE_NAME = os.getenv("INTERAKT_TEMPLATE_NAME", "")
 
+# ---------------------------------------------------------
+# WhatsApp Interakt API Configuration
+# ---------------------------------------------------------
+
+WHATSAPP_ENABLED = os.getenv(
+    "WHATSAPP_ENABLED",
+    "False"
+).lower() in ("true", "1", "t")
+
+INTERAKT_SECRET_KEY = os.getenv(
+    "INTERAKT_SECRET_KEY",
+    ""
+)
+
+INTERAKT_BASE_URL = os.getenv(
+    "INTERAKT_BASE_URL",
+    "https://api.interakt.ai/v1/public/message/"
+)
+
+INTERAKT_TEMPLATE_NAME = os.getenv(
+    "INTERAKT_TEMPLATE_NAME",
+    ""
+)
+
+
+# ---------------------------------------------------------
 # Email Configuration
+# ---------------------------------------------------------
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 465
 EMAIL_USE_SSL = True
 EMAIL_USE_TLS = False
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "support@100Transcripts.com")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 
-CASHFREE_CLIENT_ID = os.getenv("CASHFREE_CLIENT_ID")
-CASHFREE_CLIENT_SECRET = os.getenv("CASHFREE_CLIENT_SECRET")
-CASHFREE_ENVIRONMENT = os.getenv("CASHFREE_ENVIRONMENT")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+EMAIL_HOST_USER = os.getenv(
+    "EMAIL_HOST_USER",
+    "support@100Transcripts.com"
+)
+
+EMAIL_HOST_PASSWORD = os.getenv(
+    "EMAIL_HOST_PASSWORD",
+    ""
+)
+
+
+# ---------------------------------------------------------
+# Cashfree
+# ---------------------------------------------------------
+
+CASHFREE_CLIENT_ID = os.getenv(
+    "CASHFREE_CLIENT_ID"
+)
+
+CASHFREE_CLIENT_SECRET = os.getenv(
+    "CASHFREE_CLIENT_SECRET"
+)
+
+CASHFREE_ENVIRONMENT = os.getenv(
+    "CASHFREE_ENVIRONMENT"
+)
+
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL",
+    "http://localhost:5173"
+)
+
+
+# ---------------------------------------------------------
+# CSRF
+# ---------------------------------------------------------
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
 ]
+
+
+# ---------------------------------------------------------
+# Channels + Redis
+# ---------------------------------------------------------
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [
+                ('127.0.0.1', 6379),
+            ],
+        },
+    },
+}
+
+
+# ---------------------------------------------------------
+# Chat messages Redis storage
+# ---------------------------------------------------------
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+    }
+}
+
+
+# ---------------------------------------------------------
 # Password validation
-# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
+# ---------------------------------------------------------
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -147,8 +244,9 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+# ---------------------------------------------------------
 # Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
+# ---------------------------------------------------------
 
 LANGUAGE_CODE = 'en-us'
 
@@ -159,13 +257,22 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
-import os
-STATIC_URL = 'static/'
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# ---------------------------------------------------------
+# Static / Media
+# ---------------------------------------------------------
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
+STATIC_URL = 'static/'
+
+MEDIA_URL = '/media/'
+
+MEDIA_ROOT = os.path.join(
+    BASE_DIR,
+    'media'
+)
+
+
+# ---------------------------------------------------------
+# Default primary key
+# ---------------------------------------------------------
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

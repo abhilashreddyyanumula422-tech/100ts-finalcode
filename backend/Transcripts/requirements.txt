@@ -4,3 +4,8 @@ django-cors-headers==4.2.0
 python-dotenv==1.0.0
 requests==2.31.0
 cashfree_pg>=4.0.0
+channels==4.0.0
+channels-redis==4.1.0
+redis==5.0.1
+daphne==4.0.0
+reportlab>=4.0.0

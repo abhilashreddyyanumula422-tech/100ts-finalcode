@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { API_BASE_URL } from "../../services/api";
+import useAdminAgentWebSocket from "../hooks/useAdminAgentWebSocket";
 import { MessageSquare, Paperclip, Send, ArrowLeft, User, FileText, Check, Search, ChevronRight } from "lucide-react";
 
 export default function AdminAgentMessages() {
@@ -23,18 +24,69 @@ export default function AdminAgentMessages() {
 
   const messagesEndRef = useRef(null);
 
+
+
+  // agentDetails.id comes from the backend's GET response, which resolves
+  // the CURRENT assignment the same way the Redis key is built
+  // (order_by('-assigned_at').first()). Using it instead of guessing from
+  // the conversation list guarantees the WebSocket writes to the exact
+  // same Redis key the GET history reads from.
+  const agentId = agentDetails?.id
+    ?? (appId?.startsWith("general-")
+        ? appId.split("-")[1]
+        : assignments.find(
+            (a) => a.application_id?.toString() === appId
+          )?.agent?.id);
+
+const websocketAppId = appId?.startsWith("general-")
+  ? "general"
+  : appId;
+
+const handleWebSocketMessage = (data) => {
+  console.log("ADMIN RECEIVED:", data);
+
+  if (data.type === "connection") {
+    console.log("Admin WebSocket connected to agent:", data.agent_id);
+    return;
+  }
+
+  if (data.type === "message") {
+    const incomingMessage = data.message;
+
+    setMessages((prevMessages) => {
+      const exists = prevMessages.some(
+        (msg) =>
+          msg.id &&
+          incomingMessage.id &&
+          msg.id === incomingMessage.id
+      );
+
+      if (exists) {
+        return prevMessages;
+      }
+
+      return [...prevMessages, incomingMessage];
+    });
+  }
+};
+
+const { sendMessage } = useAdminAgentWebSocket(
+  agentId,
+  websocketAppId,
+  handleWebSocketMessage
+);
+
   // Poll assignments list and chat (if selected)
   useEffect(() => {
+    setAgentDetails(null);
+    setMessages([]);
     fetchAssignments();
     if (appId) {
       fetchMessages();
     }
-    const intervalId = setInterval(() => {
-      fetchAssignments(true);
-      if (appId) {
-        fetchMessages(true);
-      }
-    }, 5000);
+const intervalId = setInterval(() => {
+  fetchAssignments(true);
+}, 5000);
     return () => clearInterval(intervalId);
   }, [appId]);
 
@@ -93,45 +145,31 @@ export default function AdminAgentMessages() {
     }
   };
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!newMessage.trim() && !attachment) return;
-    setSending(true);
+const handleSendMessage = (e) => {
+  e.preventDefault();
 
-    try {
-      const formData = new FormData();
-      if (newMessage.trim()) formData.append("message", newMessage);
-      if (attachment) formData.append("attachment", attachment);
+  if (!newMessage.trim()) {
+    return;
+  }
 
-      let endpoint = `${API_BASE_URL}/api/admin/applications/${appId}/messages/`;
-      if (appId.startsWith("general-")) {
-        const agentId = appId.split("-")[1];
-        endpoint = `${API_BASE_URL}/api/admin/agent-support/general/${agentId}/`;
-      }
+  const applicationId =
+    websocketAppId === "general"
+      ? null
+      : websocketAppId;
 
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Authorization": `Token ${JSON.parse(localStorage.getItem("user"))?.token}` },
-        body: formData,
-      });
+  const success = sendMessage(
+    newMessage.trim(),
+    applicationId,
+    true
+  );
 
-      if (res.ok) {
-        const newMsg = await res.json();
-        setMessages([...messages, newMsg]);
-        setNewMessage("");
-        setAttachment(null);
-        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-      } else {
-        const errData = await res.json();
-        alert(`Error: ${errData.error || res.statusText}`);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error sending message.");
-    } finally {
-      setSending(false);
-    }
-  };
+  if (!success) {
+    alert("WebSocket is not connected.");
+    return;
+  }
+
+  setNewMessage("");
+};
 
   const filteredAssignments = assignments.filter(a => {
     if (!a.agent) return false;

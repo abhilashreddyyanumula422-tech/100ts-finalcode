@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { API_BASE_URL } from "../../services/api";
+import useAgentWebSocket from "../hooks/useAgentWebSocket";
 import { MessageSquare, Paperclip, Send, ArrowLeft, User, FileText, Check, Search, ChevronRight, Bell, CheckCheck } from "lucide-react";
 
 export default function AgentAdminMessages() {
@@ -25,9 +26,29 @@ export default function AgentAdminMessages() {
 
   const messagesEndRef = useRef(null);
 
-  const token = localStorage.getItem("agentToken");
-  const agentData = JSON.parse(localStorage.getItem("agentUser") || "{}");
-  const agentId = agentData.id;
+const token = localStorage.getItem("agent_token");
+
+const agentData = JSON.parse(
+  localStorage.getItem("agent") || "{}"
+);
+
+const agentId = agentData.id;
+
+console.log("Agent ID:", agentId);
+console.log("Agent Token exists:", !!token);
+const handleWebSocketMessage = (message) => {
+  console.log("WebSocket message received:", message);
+
+  if (message.type === "message") {
+    setMessages((prev) => [...prev, message.message]);   // ✅ push the inner chat object
+  }
+};
+
+const { sendMessage } = useAgentWebSocket(
+    agentId,
+    appId,
+    handleWebSocketMessage
+);
 
   useEffect(() => {
     if (agentId && token) {
@@ -96,16 +117,24 @@ export default function AgentAdminMessages() {
     if (!isPoll) setLoading(true);
     if (!isPoll) setError("");
     try {
-      const endpoint = appId === "general"
-        ? `${API_BASE_URL}/api/agent/${agentId}/admin-messages/general/`
-        : `${API_BASE_URL}/api/agent/${agentId}/admin-messages/${appId}/`;
+      const endpoint = `${API_BASE_URL}/api/agent/${agentId}/admin-messages/${appId}/`;
         
       const res = await fetch(endpoint, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        setMessages(data.messages || []);
+        const incoming = data.messages || [];
+        setMessages((prev) => {
+          if (!isPoll) return incoming; // initial load: trust server fully
+          const byId = new Map(incoming.map((m) => [m.id, m]));
+          const merged = [...incoming];
+          for (const m of prev) {
+            if (m.id && !byId.has(m.id)) merged.push(m);
+          }
+          merged.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+          return merged;
+        });
         setAppDetails(data.application_details);
         setAgentDetails(data.agent_details);
       } else {
@@ -122,42 +151,39 @@ export default function AgentAdminMessages() {
     }
   };
 
-  const handleSendMessage = async (e) => {
+const handleSendMessage = async (e) => {
     e.preventDefault();
+
     if (!newMessage.trim() && !attachment) return;
+
+    // WebSocket currently handles text messages.
+    // Attachment handling will be done separately.
+    if (attachment) {
+        alert("Attachments will be handled separately.");
+        return;
+    }
+
     setSending(true);
 
     try {
-      const formData = new FormData();
-      if (newMessage.trim()) formData.append("message", newMessage);
-      if (attachment) formData.append("attachment", attachment);
+        const success = sendMessage(
+            newMessage.trim(),
+            appId === "general" ? null : appId,
+            false
+        );
 
-      const endpoint = appId === "general"
-        ? `${API_BASE_URL}/api/agent/${agentId}/admin-messages/general/`
-        : `${API_BASE_URL}/api/agent/${agentId}/admin-messages/${appId}/`;
-
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${token}` },
-        body: formData,
-      });
-
-      if (res.ok) {
-        const newMsg = await res.json();
-        setMessages([...messages, newMsg]);
-        setNewMessage("");
-        setAttachment(null);
-      } else {
-        const errData = await res.json();
-        alert(`Error: ${errData.error || res.statusText}`);
-      }
+        if (success) {
+            setNewMessage("");
+        } else {
+            alert("WebSocket is not connected.");
+        }
     } catch (err) {
-      console.error(err);
-      alert("Error sending message.");
+        console.error(err);
+        alert("Error sending message.");
     } finally {
-      setSending(false);
+        setSending(false);
     }
-  };
+};
 
   // -------------------------------------------------------------
   // RENDER: COMBINED SPLIT-SCREEN LAYOUT
@@ -196,28 +222,7 @@ export default function AgentAdminMessages() {
             <div className="p-8 text-center text-sm text-slate-400">Loading requests...</div>
           ) : (
             <>
-              {/* Always show General Support Chat */}
-              <div
-                onClick={() => navigate(`/agent/support/general`)}
-                className={`p-4 hover:bg-slate-50 transition cursor-pointer flex items-center justify-between group ${appId === 'general' ? 'bg-[#108a55]/5 border-l-4 border-[#108a55]' : 'border-l-4 border-transparent'}`}
-              >
-                <div className="flex items-center gap-5">
-                  <div className={`w-12 h-12 rounded-full ${appId === 'general' ? 'bg-[#108a55] text-white' : 'bg-[#108a55]/20 text-[#108a55]'} flex items-center justify-center flex-shrink-0`}>
-                    <MessageSquare size={20} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-3 mb-1">
-                      <h4 className="font-bold text-slate-800">General Support Chat</h4>
-                    </div>
-                    <p className="text-sm text-slate-500">
-                      <span className="font-medium text-slate-700">Queries not related to a specific application</span>
-                    </p>
-                  </div>
-                </div>
-                <div className="text-slate-300 group-hover:text-[#108a55] transition pr-4">
-                  <ChevronRight size={20} />
-                </div>
-              </div>
+
 
               {filtered.length === 0 ? (
                 <div className="p-12 text-center text-slate-400 flex flex-col items-center">
