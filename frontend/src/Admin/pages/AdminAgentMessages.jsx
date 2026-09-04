@@ -131,6 +131,16 @@ const intervalId = setInterval(() => {
         setMessages(data.messages || []);
         setAppDetails(data.application_details);
         setAgentDetails(data.agent_details);
+        
+        if (!isPoll) {
+          setAssignments(prev => prev.map(a => {
+            const targetPathId = a.type === 'general' ? 'general-' + a.agent?.id : a.application_id;
+            if (targetPathId?.toString() === appId) {
+              return { ...a, unread_count_admin: 0 };
+            }
+            return a;
+          }));
+        }
       } else {
         if (!isPoll) {
           const errData = await res.json();

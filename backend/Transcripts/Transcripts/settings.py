@@ -22,11 +22,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-SECRET_KEY = 'django-insecure-_qb@%u)m*q4h+9mp2h8vp2h8vp#tw7v_*p9-yl^gk4&wmsi)p8vlfa'
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-default-key-for-dev")
 
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
 
 
 # ---------------------------------------------------------
@@ -47,7 +47,11 @@ INSTALLED_APPS = [
     'channels',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+if os.getenv("CORS_ALLOWED_ORIGINS"):
+    CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS").split(",")
+    CORS_ALLOW_ALL_ORIGINS = False
+else:
+    CORS_ALLOW_ALL_ORIGINS = DEBUG
 
 
 MIDDLEWARE = [
@@ -60,6 +64,15 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+ENFORCE_HTTPS = os.getenv("ENFORCE_HTTPS", "False").lower() in ("true", "1", "t")
+if ENFORCE_HTTPS:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 
 ROOT_URLCONF = 'Transcripts.urls'
@@ -92,24 +105,24 @@ ASGI_APPLICATION = 'Transcripts.asgi.application'
 # Database
 # ---------------------------------------------------------
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if os.getenv("USE_POSTGRES", "False").lower() in ("true", "1", "t"):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', '100Transcripts'),
+            'USER': os.getenv('DB_USER', 'postgres'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'Srini123'),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+        }
     }
-}
-
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': '100Transcripts',
-#         'USER': 'postgres',
-#         'PASSWORD': 'Srini123',
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-#     }
-# }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # ---------------------------------------------------------
@@ -191,9 +204,7 @@ FRONTEND_URL = os.getenv(
 # CSRF
 # ---------------------------------------------------------
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-]
+CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:5173").split(",")
 
 
 # ---------------------------------------------------------
@@ -205,7 +216,7 @@ CHANNEL_LAYERS = {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
             'hosts': [
-                ('127.0.0.1', 6379),
+                os.getenv("REDIS_URL", "redis://127.0.0.1:6379/1"),
             ],
         },
     },
@@ -219,7 +230,7 @@ CHANNEL_LAYERS = {
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
+        "LOCATION": os.getenv("REDIS_URL", "redis://127.0.0.1:6379/1"),
     }
 }
 
@@ -262,6 +273,7 @@ USE_TZ = True
 # ---------------------------------------------------------
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 MEDIA_URL = '/media/'
 

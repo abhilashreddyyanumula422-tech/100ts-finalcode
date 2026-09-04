@@ -891,7 +891,7 @@ def agent_upload_document(request, agent_id, assignment_id):
         import os
         ext = os.path.splitext(uploaded_file.name)[1]
         path = default_storage.save(
-            f"agent_docs/assignment_{assignment_id}{ext}",
+            f"application_{assignment.application.id}/agent_collected_docs/assignment_{assignment.id}{ext}",
             ContentFile(uploaded_file.read())
         )
         file_url = default_storage.url(path)
@@ -1496,8 +1496,9 @@ def admin_agent_messages(request, app_id):
         return JsonResponse({"error": "Application not found"}, status=404)
 
     if request.method == "GET":
-        from .redis_chat import get_messages
+        from .redis_chat import get_messages, reset_unread
         raw_messages = get_messages(agent_id=agent.id, application_id=application.id)
+        reset_unread(agent.id, application.id, for_admin=True)
 
         data = [
             {
@@ -1547,7 +1548,7 @@ def admin_agent_messages(request, app_id):
 
         attachment_url = None
         if attachment_file:
-            path = default_storage.save(f"agent_admin_messages/{attachment_file.name}", attachment_file)
+            path = default_storage.save(f"agent_admin_messages/application_{application.id}/{attachment_file.name}", attachment_file)
             attachment_url = default_storage.url(path)
 
         chat_message = save_message(
@@ -1577,8 +1578,8 @@ def admin_agent_messages(request, app_id):
 @admin_required
 def admin_unread_messages_count(request):
     try:
-        from .models import AgentAdminMessage
-        count = AgentAdminMessage.objects.filter(is_from_admin=False, is_read=False).count()
+        from .redis_chat import get_total_unread_for_admin
+        count = get_total_unread_for_admin()
         return JsonResponse({"unread_count": count})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -1587,8 +1588,8 @@ def admin_unread_messages_count(request):
 @agent_required
 def agent_unread_messages_count(request, agent_id):
     try:
-        from .models import AgentAdminMessage
-        count = AgentAdminMessage.objects.filter(agent_id=agent_id, is_from_admin=True, is_read=False).count()
+        from .redis_chat import get_total_unread_for_agent
+        count = get_total_unread_for_agent(agent_id)
         return JsonResponse({"unread_count": count})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -1599,7 +1600,7 @@ def agent_admin_messages(request, agent_id, app_id):
     """Agent view to get/post messages to the Admin."""
     if request.method == "GET":
         from .models import Application, AgentAssignment
-        from .redis_chat import get_messages
+        from .redis_chat import get_messages, reset_unread
         try:
             application = Application.objects.get(id=app_id)
             assignment = AgentAssignment.objects.filter(agent_id=agent_id, application=application).first()
@@ -1607,6 +1608,7 @@ def agent_admin_messages(request, agent_id, app_id):
             return JsonResponse({"error": "Application not found"}, status=404)
 
         raw_messages = get_messages(agent_id=agent_id, application_id=int(app_id))
+        reset_unread(agent_id, int(app_id), for_admin=False)
 
         data = [
             {
@@ -1657,7 +1659,7 @@ def agent_admin_messages(request, agent_id, app_id):
 
             attachment_url = None
             if attachment_file:
-                path = default_storage.save(f"agent_admin_messages/{attachment_file.name}", attachment_file)
+                path = default_storage.save(f"agent_admin_messages/application_{app_id}/{attachment_file.name}", attachment_file)
                 attachment_url = default_storage.url(path)
 
             chat_message = save_message(

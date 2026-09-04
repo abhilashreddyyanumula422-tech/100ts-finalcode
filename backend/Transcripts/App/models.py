@@ -191,11 +191,16 @@ class Degree(models.Model):
         return self.university
 
 
+def document_upload_path(instance, filename):
+    if instance.application:
+        return f'documents/application_{instance.application.id}/{filename}'
+    return f'documents/{filename}'
+
 class Document(models.Model):
     application = models.ForeignKey(Application, on_delete=models.CASCADE, related_name="documents")
     doc_type = models.CharField(max_length=100)  # cmm / degree / internship
     name = models.CharField(max_length=255)
-    file = models.FileField(upload_to="documents/")
+    file = models.FileField(upload_to=document_upload_path)
     issue = models.ForeignKey('Issue', on_delete=models.SET_NULL, null=True, blank=True, related_name="documents")
 
     def __str__(self):
@@ -542,12 +547,17 @@ class Issue(models.Model):
         return f"Issue {self.id} for App {self.application.id} ({self.status})"
 
 
+def agent_message_upload_path(instance, filename):
+    if instance.application:
+        return f'agent_admin_messages/application_{instance.application.id}/{filename}'
+    return f'agent_admin_messages/general_agent_{instance.agent.id}/{filename}'
+
 class AgentAdminMessage(models.Model):
     application = models.ForeignKey(Application, on_delete=models.CASCADE, related_name="agent_admin_messages", null=True, blank=True)
     agent = models.ForeignKey(Agent, on_delete=models.CASCADE, related_name="admin_messages")
     admin = models.ForeignKey(Admin, on_delete=models.SET_NULL, null=True, blank=True)
     message = models.TextField(blank=True, null=True)
-    attachment = models.FileField(upload_to="agent_admin_messages/", blank=True, null=True)
+    attachment = models.FileField(upload_to=agent_message_upload_path, blank=True, null=True)
     is_from_admin = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)

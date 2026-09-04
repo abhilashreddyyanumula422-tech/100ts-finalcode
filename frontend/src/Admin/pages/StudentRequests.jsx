@@ -305,17 +305,17 @@ Please check your email for detailed information or contact us if you have any q
               >
 
                 {/* STUDENT */}
-                <td className="p-4 sticky left-0 bg-white group-hover:bg-slate-50 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] transition-colors">
+                <td className="p-4 sticky left-0 bg-white group-hover:bg-slate-50 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] transition-colors align-middle">
                   <div className="flex items-center gap-3">
 
                     {/* Avatar */}
-                    <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm">
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">
                       {req.fullName?.charAt(0)}
                     </div>
 
                     {/* Name + Email */}
                     <div className="flex flex-col items-start justify-center">
-                      <div className="font-semibold text-slate-800">
+                      <div className="font-semibold text-slate-800 whitespace-nowrap">
                         {req.fullName}
                       </div>
 
@@ -325,7 +325,7 @@ Please check your email for detailed information or contact us if you have any q
                         </div>
                       )}
 
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-slate-500 whitespace-nowrap">
                         {req.email}
                       </div>
                     </div>
@@ -334,13 +334,13 @@ Please check your email for detailed information or contact us if you have any q
 
 
                 {/* TRACKING ID / APP ID */}
-                <td className="p-4 align-top">
+                <td className="p-4 align-middle">
                   <div className="flex flex-col gap-1">
-                    <div className="font-mono font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded inline-block text-xs whitespace-nowrap w-max">
+                    <div className="font-mono font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded inline-block text-[11px] whitespace-nowrap w-max">
                       {req.application_id || "N/A"}
                     </div>
                     {req.id && (
-                      <div className="font-mono text-slate-500 text-xs whitespace-nowrap">
+                      <div className="font-mono text-slate-400 text-[11px] whitespace-nowrap">
                         TRK: {req.id}
                       </div>
                     )}
@@ -348,37 +348,37 @@ Please check your email for detailed information or contact us if you have any q
                 </td>
 
                 {/* UNIVERSITY */}
-                <td className="p-4 text-slate-600 font-medium">
+                <td className="p-4 text-slate-600 font-medium text-sm align-middle min-w-[150px]">
                   {req.university}
                 </td>
 
                 {/* REQUEST TYPE */}
-                <td className="p-4">
-                  <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-semibold">
+                <td className="p-4 align-middle">
+                  <span className="px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-bold whitespace-nowrap tracking-wide">
                     {req.type}
                   </span>
                 </td>
 
                 {/* PHONE */}
-                <td className="p-4 text-slate-600">
+                <td className="p-4 text-slate-600 text-sm align-middle whitespace-nowrap font-medium">
                   {req.phone}
                 </td>
 
                 {/* PAYMENT */}
-                <td className="p-4">
+                <td className="p-4 align-middle">
                   <div className="flex flex-col gap-1 items-start">
                     <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-wide whitespace-nowrap ${req.payment === "Fully Paid"
-                        ? "bg-emerald-100 text-emerald-700"
+                      className={`inline-flex items-center justify-center px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide whitespace-nowrap border ${req.payment === "Fully Paid"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                         : req.payment === "Partially Paid"
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-rose-100 text-rose-700"
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : "bg-rose-50 text-rose-700 border-rose-200"
                         }`}
                     >
-                      {req.payment === "Partially Paid" ? "🟡 Partially Paid" : req.payment === "Fully Paid" ? "🟢 Fully Paid" : "⚪ " + req.payment}
+                      {req.payment}
                     </span>
                     {req.payment === "Partially Paid" && req.total_amount > 0 && (
-                      <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded ml-1">
+                      <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded mt-0.5 whitespace-nowrap">
                         Bal: ₹{req.total_amount - req.paid_amount}
                       </span>
                     )}
@@ -386,44 +386,44 @@ Please check your email for detailed information or contact us if you have any q
                 </td>
 
                 {/* STATUS */}
-                <td className="p-4">
+                <td className="p-4 align-middle">
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-bold ${String(req.status || "").toLowerCase().trim() === "approved"
-                        ? "bg-green-100 text-green-700"
+                    className={`inline-flex items-center justify-center px-2.5 py-1 rounded-md text-[11px] font-bold whitespace-nowrap border ${String(req.status || "").toLowerCase().trim() === "approved"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                         : String(req.status || "").toLowerCase().trim() === "pending_approval"
-                          ? "bg-orange-100 text-orange-700"
+                          ? "bg-orange-50 text-orange-700 border-orange-200"
                           : String(req.status || "").toLowerCase().trim() === "pending"
-                            ? "bg-yellow-100 text-yellow-700"
+                            ? "bg-amber-50 text-amber-700 border-amber-200"
                             : String(req.status || "").toLowerCase().trim() === "rejected"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-slate-100 text-slate-700"
+                              ? "bg-rose-50 text-rose-700 border-rose-200"
+                              : "bg-slate-50 text-slate-700 border-slate-200"
                       }`}
                   >
                     {req.status === "pending_approval" ? "Pending Approval" : req.status || "Pending"}
                   </span>
                   {req.user_acknowledged && (
-                    <div className="mt-2 flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md w-max border border-emerald-100 shadow-sm">
-                      <CheckCircle2 size={12} /> Acknowledged
+                    <div className="mt-1.5 flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded w-max border border-emerald-100 uppercase tracking-wide">
+                      <CheckCircle2 size={10} /> Ack
                     </div>
                   )}
                 </td>
 
                 {/* ACTIONS */}
-                <td className="p-4 text-right pr-6">
-                  <div className="flex justify-end gap-2">
+                <td className="p-4 text-right pr-6 align-middle">
+                  <div className="flex items-center justify-end gap-2">
 
                     {/* WHATSAPP */}
                     <button
                       onClick={() => handleWhatsApp(req)}
-                      className="p-2 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition"
+                      className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition border border-emerald-100"
                       title="WhatsApp"
                     >
-                      <FaWhatsapp size={18} />
+                      <FaWhatsapp size={16} />
                     </button>
                     {/* REPLY */}
                     <button
                       onClick={() => setReplyingTo(req)}
-                      className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition"
+                      className="h-8 px-3 rounded-lg bg-blue-600 text-white text-[11px] font-bold hover:bg-blue-700 transition flex items-center shadow-sm"
                     >
                       Reply
                     </button>
@@ -431,9 +431,10 @@ Please check your email for detailed information or contact us if you have any q
                     {/* VIEW */}
                     <button
                       onClick={() => setSelectedStudent(req)}
-                      className="p-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
+                      className="w-8 h-8 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center hover:bg-slate-200 hover:text-slate-800 transition border border-slate-200"
+                      title="View Details"
                     >
-                      <Eye size={17} />
+                      <Eye size={16} />
                     </button>
                   </div>
                 </td>
@@ -642,15 +643,21 @@ Please check your email for detailed information or contact us if you have any q
                   <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-l-4 border-blue-600 pl-2">Uploaded Documents</h4>
                   <div className="grid grid-cols-1 gap-3">
                     {selectedStudent.documentsList?.map((doc, index) => (
-                      <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200 hover:border-blue-300 transition-all">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-white rounded-xl text-blue-600 border border-slate-100"><FileCheck size={18} /></div>
-                          <div>
-                            <p className="text-xs font-bold text-slate-700">{doc.name}</p>
-                            <p className="text-[10px] font-bold uppercase text-green-600">{doc.status}</p>
+                      <div key={index} className="flex items-center justify-between p-3.5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="p-2.5 bg-blue-50 rounded-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
+                            <FileCheck size={18} />
+                          </div>
+                          <div className="overflow-hidden pr-2">
+                            <p className="text-sm font-bold text-slate-700 truncate" title={doc.name}>
+                              {doc.name}
+                            </p>
+                            <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase bg-green-100 text-green-700 border border-green-200">
+                              {doc.status || "VERIFIED"}
+                            </span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                           <button
                             onClick={() => {
                               setCurrentDocIndex(index);
@@ -664,7 +671,7 @@ Please check your email for detailed information or contact us if you have any q
                             onClick={() => {
                               window.open(downloadDocument(doc.id));
                             }}
-                            className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200 transition"
+                            className="px-3 py-1.5 bg-slate-50 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200 hover:text-slate-800 transition border border-slate-200"
                           >
                             Download
                           </button>

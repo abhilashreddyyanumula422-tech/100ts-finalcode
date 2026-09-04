@@ -27,6 +27,40 @@ export default function AgentsManagement() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [errors, setErrors] = useState({});
+
+  const validateField = (field, value) => {
+    let msg = "";
+    switch (field) {
+      case "name":
+        if (!value || value.trim().length < 3) msg = "Must be at least 3 chars.";
+        break;
+      case "employee_id":
+        if (!value || value.trim().length < 3) msg = "Must be at least 3 chars.";
+        break;
+      case "mobile":
+        if (!/^\d{10}$/.test(value.trim())) msg = "Must be exactly 10 digits.";
+        break;
+      case "email":
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) msg = "Invalid email format.";
+        break;
+      case "password":
+        if (!editingAgent && (!value || value.length < 6)) msg = "Min 6 characters required.";
+        break;
+      case "experience":
+        if (value === "" || value < 0 || isNaN(value)) msg = "Cannot be negative.";
+        break;
+      default:
+        break;
+    }
+    return msg;
+  };
+
+  const handleChange = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+    const errMsg = validateField(field, value);
+    setErrors(prev => ({ ...prev, [field]: errMsg }));
+  };
 
   const fetchAgents = useCallback(async () => {
     setLoading(true);
@@ -46,6 +80,7 @@ export default function AgentsManagement() {
     setEditingAgent(null);
     setForm(EMPTY_FORM);
     setError("");
+    setErrors({});
     setModalOpen(true);
   };
 
@@ -53,6 +88,7 @@ export default function AgentsManagement() {
     setEditingAgent(agent);
     setForm({ ...agent, password: "" }); // don't pre-fill password
     setError("");
+    setErrors({});
     setModalOpen(true);
   };
 
@@ -60,6 +96,21 @@ export default function AgentsManagement() {
     e.preventDefault();
     setSaving(true);
     setError("");
+
+    // --- Final Form Validation ---
+    const newErrors = {};
+    Object.keys(form).forEach(key => {
+      const msg = validateField(key, form[key]);
+      if (msg) newErrors[key] = msg;
+    });
+
+    if (Object.values(newErrors).some(msg => msg !== "")) {
+      setErrors(newErrors);
+      setError("Please fix the errors below before submitting.");
+      setSaving(false);
+      return;
+    }
+
     try {
       const payload = { ...form };
       if (editingAgent && !payload.password) delete payload.password;
@@ -157,11 +208,10 @@ export default function AgentsManagement() {
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-                filterStatus === s
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${filterStatus === s
                   ? "bg-blue-600 text-white shadow"
                   : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-              }`}
+                }`}
             >
               {s}
             </button>
@@ -213,11 +263,10 @@ export default function AgentsManagement() {
                       <span className="text-sm text-slate-600">{a.experience} yr{a.experience !== 1 ? "s" : ""}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                        a.current_workload === 0 ? "bg-green-100 text-green-700" :
-                        a.current_workload <= 3 ? "bg-yellow-100 text-yellow-700" :
-                        "bg-red-100 text-red-700"
-                      }`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${a.current_workload === 0 ? "bg-green-100 text-green-700" :
+                          a.current_workload <= 3 ? "bg-yellow-100 text-yellow-700" :
+                            "bg-red-100 text-red-700"
+                        }`}>
                         {a.current_workload} active
                       </span>
                     </td>
@@ -233,9 +282,8 @@ export default function AgentsManagement() {
                         </button>
                         <button
                           onClick={() => handleToggle(a)}
-                          className={`p-1.5 rounded-lg transition ${
-                            a.is_active ? "hover:bg-orange-50 text-orange-500" : "hover:bg-green-50 text-green-600"
-                          }`}
+                          className={`p-1.5 rounded-lg transition ${a.is_active ? "hover:bg-orange-50 text-orange-500" : "hover:bg-green-50 text-green-600"
+                            }`}
                           title={a.is_active ? "Deactivate" : "Activate"}
                         >
                           {a.is_active ? <ToggleLeft size={18} /> : <ToggleRight size={18} />}
@@ -278,32 +326,36 @@ export default function AgentsManagement() {
                 <div className="col-span-2">
                   <label className="text-xs font-bold text-slate-500 uppercase">Full Name *</label>
                   <input
-                    required className="w-full border rounded-xl p-2.5 mt-1 text-sm outline-none focus:ring-2 focus:ring-blue-400"
-                    value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required className={`w-full border rounded-xl p-2.5 mt-1 text-sm outline-none focus:ring-2 ${errors.name ? 'border-red-400 focus:ring-red-400' : 'focus:ring-blue-400'}`}
+                    value={form.name} onChange={(e) => handleChange("name", e.target.value)}
                   />
+                  {errors.name && <p className="text-red-500 text-xs font-semibold mt-1">{errors.name}</p>}
                 </div>
                 <div>
                   <label className="text-xs font-bold text-slate-500 uppercase">Employee ID *</label>
                   <input
                     required disabled={!!editingAgent}
-                    className="w-full border rounded-xl p-2.5 mt-1 text-sm outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-slate-50"
-                    value={form.employee_id} onChange={(e) => setForm({ ...form, employee_id: e.target.value })}
+                    className={`w-full border rounded-xl p-2.5 mt-1 text-sm outline-none focus:ring-2 disabled:bg-slate-50 ${errors.employee_id ? 'border-red-400 focus:ring-red-400' : 'focus:ring-blue-400'}`}
+                    value={form.employee_id} onChange={(e) => handleChange("employee_id", e.target.value)}
                   />
+                  {errors.employee_id && <p className="text-red-500 text-xs font-semibold mt-1">{errors.employee_id}</p>}
                 </div>
                 <div>
                   <label className="text-xs font-bold text-slate-500 uppercase">Mobile *</label>
                   <input
-                    required className="w-full border rounded-xl p-2.5 mt-1 text-sm outline-none focus:ring-2 focus:ring-blue-400"
-                    value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })}
+                    required className={`w-full border rounded-xl p-2.5 mt-1 text-sm outline-none focus:ring-2 ${errors.mobile ? 'border-red-400 focus:ring-red-400' : 'focus:ring-blue-400'}`}
+                    value={form.mobile} onChange={(e) => handleChange("mobile", e.target.value)}
                   />
+                  {errors.mobile && <p className="text-red-500 text-xs font-semibold mt-1">{errors.mobile}</p>}
                 </div>
                 <div className="col-span-2">
                   <label className="text-xs font-bold text-slate-500 uppercase">Email *</label>
                   <input
                     required type="email"
-                    className="w-full border rounded-xl p-2.5 mt-1 text-sm outline-none focus:ring-2 focus:ring-blue-400"
-                    value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    className={`w-full border rounded-xl p-2.5 mt-1 text-sm outline-none focus:ring-2 ${errors.email ? 'border-red-400 focus:ring-red-400' : 'focus:ring-blue-400'}`}
+                    value={form.email} onChange={(e) => handleChange("email", e.target.value)}
                   />
+                  {errors.email && <p className="text-red-500 text-xs font-semibold mt-1">{errors.email}</p>}
                 </div>
                 <div>
                   <label className="text-xs font-bold text-slate-500 uppercase">
@@ -311,31 +363,33 @@ export default function AgentsManagement() {
                   </label>
                   <input
                     type="password" required={!editingAgent}
-                    className="w-full border rounded-xl p-2.5 mt-1 text-sm outline-none focus:ring-2 focus:ring-blue-400"
-                    value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    className={`w-full border rounded-xl p-2.5 mt-1 text-sm outline-none focus:ring-2 ${errors.password ? 'border-red-400 focus:ring-red-400' : 'focus:ring-blue-400'}`}
+                    value={form.password} onChange={(e) => handleChange("password", e.target.value)}
                   />
+                  {errors.password && <p className="text-red-500 text-xs font-semibold mt-1">{errors.password}</p>}
                 </div>
                 <div>
                   <label className="text-xs font-bold text-slate-500 uppercase">Experience (Years)</label>
                   <input
                     type="number" min={0}
-                    className="w-full border rounded-xl p-2.5 mt-1 text-sm outline-none focus:ring-2 focus:ring-blue-400"
-                    value={form.experience} onChange={(e) => setForm({ ...form, experience: parseInt(e.target.value) || 0 })}
+                    className={`w-full border rounded-xl p-2.5 mt-1 text-sm outline-none focus:ring-2 ${errors.experience ? 'border-red-400 focus:ring-red-400' : 'focus:ring-blue-400'}`}
+                    value={form.experience} onChange={(e) => handleChange("experience", parseInt(e.target.value) || 0)}
                   />
+                  {errors.experience && <p className="text-red-500 text-xs font-semibold mt-1">{errors.experience}</p>}
                 </div>
                 <div className="col-span-2">
                   <label className="text-xs font-bold text-slate-500 uppercase">Assigned Location</label>
                   <input
                     className="w-full border rounded-xl p-2.5 mt-1 text-sm outline-none focus:ring-2 focus:ring-blue-400"
                     placeholder="e.g. Hyderabad, Telangana"
-                    value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}
+                    value={form.location} onChange={(e) => handleChange("location", e.target.value)}
                   />
                 </div>
                 <div className="col-span-2">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox" checked={form.is_active}
-                      onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                      onChange={(e) => handleChange("is_active", e.target.checked)}
                       className="w-4 h-4 rounded"
                     />
                     <span className="text-sm font-semibold text-slate-700">Active (can receive assignments)</span>

@@ -2764,9 +2764,36 @@ export default function Apply() {
                     <strong style={{ color: '#1f2937' }}>Agent message:</strong> "{activeIssue.message}"
                   </div>
 
-                  {/* Provide a clear instruction to the user */}
-                  <div style={{ marginTop: '16px', fontSize: '15px', color: '#7f1d1d', fontWeight: 600 }}>
-                    Please scroll down to update your application details and replace any requested documents, then click "Submit Correction" at the bottom of the page.
+                  {/* Provide a clear button to edit the application */}
+                  <div style={{ marginTop: '20px' }}>
+                    <p style={{ fontSize: '15px', color: '#7f1d1d', fontWeight: 600, marginBottom: '16px' }}>
+                      Please click the button below to update your application details and replace any requested documents.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setIsEditingCorrection(true);
+                        setActiveStep(0);
+                      }}
+                      style={{
+                        backgroundColor: '#dc2626',
+                        color: '#ffffff',
+                        padding: '12px 24px',
+                        borderRadius: '12px',
+                        fontSize: '15px',
+                        fontWeight: 'bold',
+                        border: 'none',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(220, 38, 38, 0.2)',
+                        transition: 'transform 0.2s',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseOver={(e) => e.target.style.transform = 'scale(1.02)'}
+                      onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+                    >
+                      ✏️ Edit Application
+                    </button>
                   </div>
                 </div>
               ) : (

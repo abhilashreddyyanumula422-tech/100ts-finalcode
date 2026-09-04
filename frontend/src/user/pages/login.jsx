@@ -87,100 +87,104 @@ const Login = () => {
   };
 
   return (
-    <div className="bg-[#f8fafc] min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden">
-      
-      {/* DECORATIVE ELEMENTS */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-400/10 rounded-full blur-[120px] -mr-40 -mt-40" />
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-600/5 rounded-full blur-[100px] -ml-20 -mb-20" />
+    <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] font-sans px-4 py-12">
+      {/* Abstract Background Elements (Subtle) */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-400/10 rounded-full blur-[120px] -mr-40 -mt-40 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-cyan-500/10 rounded-full blur-[100px] -ml-20 -mb-20 pointer-events-none" />
 
-      <motion.div
-        className="w-full max-w-md bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl shadow-slate-200/50 border border-slate-100 relative z-10"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        {/* LOGO AREA */}
-        <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-600/20">
-            <ShieldCheck className="w-10 h-10 text-white" />
+      <div className="w-full max-w-md bg-white p-8 md:p-12 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 relative z-10">
+        <div className="space-y-8">
+          <div className="text-center">
+            <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-400 tracking-tight pb-1">
+              Welcome Back
+            </h2>
+            <p className="text-slate-500 mt-2 font-medium">Please enter your details to sign in.</p>
           </div>
-          <h2 className="text-3xl font-black text-slate-800 tracking-tight">
-            Welcome Back
-          </h2>
-          <p className="text-slate-400 text-sm font-bold uppercase tracking-[0.2em] mt-3">
-            Sign in to track your files
-          </p>
-        </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
-          {/* EMAIL */}
-          <div className="space-y-2">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-4">Email Address</label>
-            <div className="relative group">
-              <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors w-5 h-5" />
-              <input
-                type="email"
-                name="email"
-                placeholder="name@example.com"
-                value={form.email}
-                onChange={handleChange}
-                required
-                className={`w-full bg-slate-50 py-4 pl-14 pr-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white border transition-all font-medium text-slate-700 ${errors.email ? 'border-red-400 focus:border-red-500' : 'border-transparent focus:border-blue-500/30'}`}
-              />
+          <form onSubmit={handleLogin} className="space-y-5">
+            {/* EMAIL */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-bold text-slate-700">Email Address</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                </div>
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="name@example.com"
+                  value={form.email}
+                  onChange={handleChange}
+                  required
+                  className={`block w-full pl-11 pr-4 py-3.5 border bg-white rounded-xl text-sm font-medium text-slate-900 outline-none transition-all focus:ring-4 ${
+                    errors.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 hover:border-slate-300'
+                  }`}
+                />
+              </div>
+              {errors.email && <p className="text-xs text-red-500 font-semibold mt-1">{errors.email}</p>}
             </div>
-            {errors.email && <p className="text-xs text-red-500 font-bold pl-4">{errors.email}</p>}
-          </div>
 
-          {/* PASSWORD */}
-          <div className="space-y-2">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-4">Password</label>
-            <div className="relative group">
-              <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors w-5 h-5" />
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                placeholder="enter password"
-                value={form.password}
-                onChange={handleChange}
-                required
-                className={`w-full bg-slate-50 py-4 pl-14 pr-12 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white border transition-all font-medium text-slate-700 ${errors.password ? 'border-red-400 focus:border-red-500' : 'border-transparent focus:border-blue-500/30'}`}
-              />
-              <button
-                type="button"
-                className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
-              </button>
+            {/* PASSWORD */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-bold text-slate-700">Password</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                </div>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  placeholder="••••••••"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                  className={`block w-full pl-11 pr-11 py-3.5 border bg-white rounded-xl text-sm font-medium text-slate-900 outline-none transition-all focus:ring-4 ${
+                    errors.password ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 hover:border-slate-300'
+                  }`}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors outline-none"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+                </button>
+              </div>
+              {errors.password && <p className="text-xs text-red-500 font-semibold mt-1">{errors.password}</p>}
             </div>
-            {errors.password && <p className="text-xs text-red-500 font-bold pl-4">{errors.password}</p>}
-          </div>
 
-          <div className="flex justify-end pt-1">
-            <Link to="/forgot-password" className="text-xs font-bold text-blue-600 hover:underline">
-              Forgot Password?
-            </Link>
-          </div>
+            <div className="flex items-center justify-end">
+              <Link to="/forgot-password" className="text-sm font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors">
+                Forgot password?
+              </Link>
+            </div>
 
-          {/* BUTTON */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-600 to-cyan-400 text-white py-4 rounded-full font-black text-lg flex items-center justify-center gap-3 hover:from-blue-700 hover:to-cyan-500 transition-all shadow-lg shadow-blue-500/30 active:scale-95 disabled:opacity-50"
-          >
-            {loading ? "Signing In..." : "Sign In"} <ArrowRight className="w-5 h-5" />
-          </button>
-        </form>
+            {/* SUBMIT BUTTON */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full relative flex items-center justify-center py-3 px-4 border border-transparent rounded-full text-base font-bold text-white bg-gradient-to-r from-blue-600 to-cyan-400 hover:from-blue-700 hover:to-cyan-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 shadow-lg shadow-blue-500/30 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed group mt-2"
+            >
+              {loading ? (
+                "Signing In..."
+              ) : (
+                <>
+                  Sign In
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </button>
+          </form>
 
-        {/* FOOTER */}
-        <div className="text-center mt-10">
-          <p className="text-sm font-medium text-slate-500">
+          {/* FOOTER */}
+          <p className="text-center text-sm font-medium text-slate-500 mt-8">
             Don't have an account?{" "}
-            <Link to="/register" className="text-blue-600 font-black hover:underline">
+            <Link to="/register" className="font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors">
               Create Account
             </Link>
           </p>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

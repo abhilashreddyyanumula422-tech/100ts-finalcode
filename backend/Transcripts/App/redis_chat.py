@@ -95,8 +95,13 @@ def get_unread_count(agent_id, application_id, for_admin):
 
 def reset_unread(agent_id, application_id, for_admin):
     key = _unread_key(agent_id, application_id, for_admin)
-    cache.set(key, 0, MESSAGE_TTL)
-
+    current_count = cache.get(key, 0)
+    if current_count > 0:
+        cache.set(key, 0, MESSAGE_TTL)
+        if for_admin:
+            _bump_total("unread:admin:total", -current_count)
+        else:
+            _bump_total(f"unread:agent:total:{agent_id}", -current_count)
 
 def get_total_unread_for_admin():
     return cache.get("unread:admin:total", 0)
