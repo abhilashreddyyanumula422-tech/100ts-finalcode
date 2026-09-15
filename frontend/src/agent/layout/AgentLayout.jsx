@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { NavLink, useNavigate, Outlet } from "react-router-dom";
 import {
   LayoutDashboard, ClipboardList, CalendarClock, Package, Activity,
@@ -11,7 +11,6 @@ import { initials } from "../utils/format";
 const NAV = [
   { to: "/agent/dashboard", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/agent/requests",  label: "Requests", icon: ClipboardList, badge: "requests" },
-  { to: "/agent/visits",    label: "University Visits", icon: CalendarClock, badge: "visits" },
   { to: "/agent/delivery",  label: "Delivery", icon: Package, badge: "deliveries" },
   { to: "/agent/activity",  label: "Activity", icon: Activity },
   { to: "/agent/support",   label: "Support", icon: MessageSquare },
@@ -87,7 +86,7 @@ function Shell() {
             <div className="min-w-0">
               <p className="text-[13px] font-medium text-white truncate">{agent.name}</p>
               <p className="text-[11px] text-slate-400 truncate">
-                {agent.employee_id}{agent.location ? ` · ${agent.location}` : ""}
+                {agent.employee_id}{agent.location ? ` Â· ${agent.location}` : ""}
               </p>
             </div>
           </div>

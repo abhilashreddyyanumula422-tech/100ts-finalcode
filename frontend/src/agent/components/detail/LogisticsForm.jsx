@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Truck } from "lucide-react";
 import { ActionButton, Banner } from "../ui";
 import { COURIERS } from "../../constants/workflow";
@@ -30,7 +30,7 @@ export default function LogisticsForm({ agentId, assignmentId, assignment: a, on
 
   return (
     <div className="space-y-4">
-      <Banner tone="success">University approved — add delivery details to dispatch.</Banner>
+      <Banner tone="success">University approved - add delivery details to dispatch.</Banner>
 
       <div className="grid sm:grid-cols-2 gap-3">
         <div>

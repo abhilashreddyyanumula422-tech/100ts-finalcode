@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { saveVisitDetails, getVisitDetails, uploadVisitPhoto, updateAssignmentStatus } from "../../services/api";
 import { CheckSquare, Square, Save, Upload, Loader2, IndianRupee, Image as ImageIcon } from "lucide-react";
 
@@ -123,7 +123,7 @@ export default function UniversityVisitSection({ agentId, assignmentId, onVisitS
     <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-5 space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="font-black text-indigo-900 flex items-center gap-2">
-          🏛️ University Visit Verification
+          ðŸ›ï¸ University Visit Verification
         </h3>
       </div>
 

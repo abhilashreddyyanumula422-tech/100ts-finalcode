@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
@@ -63,7 +63,7 @@ const Login = () => {
       const { ok, data } = await login(form.email, form.password);
 
       if (ok) {
-        alert("Login Successful ✅");
+        console.log("Login Successful ✅");
         localStorage.setItem("user", JSON.stringify(data));
 
        if (data.type === "admin") {
@@ -77,10 +77,10 @@ const Login = () => {
           password: ""
         });
       } else {
-        alert(data.error || "Login Failed");
+        console.log(data.error || "Login Failed");
       }
     } catch {
-      alert("Server Error");
+      console.log("Server Error");
     } finally {
       setLoading(false);
     }

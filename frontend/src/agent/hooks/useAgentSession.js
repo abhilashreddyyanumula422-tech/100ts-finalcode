@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+﻿import { useMemo } from "react";
 import { readAgent } from "../utils/format";
 
 /** The logged-in agent, straight from the session the login flow stored. */

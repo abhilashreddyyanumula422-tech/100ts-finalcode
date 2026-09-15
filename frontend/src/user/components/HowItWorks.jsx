@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+﻿import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
  
 import uploadLogo from "../../assets/upload_logo.png";
@@ -164,7 +164,7 @@ transition={{ duration: 0.5, ease: "easeInOut" }}
     hidden: {},
     visible: {
       transition: {
-        staggerChildren: 0.3, // 🔥 delay between elements
+        staggerChildren: 0.3, // ðŸ-¥ delay between elements
       },
     },
   }}

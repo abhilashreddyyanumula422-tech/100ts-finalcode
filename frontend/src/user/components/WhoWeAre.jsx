@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { motion, useInView } from "framer-motion";
 import { Globe2, GraduationCap, ShieldCheck } from "lucide-react";
 import gpImg from "../../assets/gp.png";
@@ -261,7 +261,7 @@ const WhoWeAre = () => {
                   </span>
                 </h3>
                 <p className="text-sm text-gray-700 leading-relaxed mb-4">
-                  Founded with the vision to streamline transcript procurement, 100 Transcripts LLP bridges students and institutions worldwide with secure, efficient document delivery—leveraging <span className="font-bold text-blue-600">15+ years of experience</span> in academic documentation and international credential evaluations.
+                  Founded with the vision to streamline transcript procurement, 100 Transcripts LLP bridges students and institutions worldwide with secure, efficient document delivery - leveraging <span className="font-bold text-blue-600">15+ years of experience</span> in academic documentation and international credential evaluations.
                 </p>
               </div>
 

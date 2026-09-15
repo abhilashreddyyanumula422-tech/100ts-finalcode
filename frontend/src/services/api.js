@@ -1,4 +1,4 @@
-// ===============================
+﻿// ===============================
 // API Configuration - Centralized
 // ===============================
 
@@ -193,13 +193,16 @@ export const sendNotification = async (email, subject, message) => {
   return apiPost("/api/send-notification/", { email, subject, message });
 };
 
-export const updateApplicationStatus = async (id, status, adminMessage, agent, rejectionReason, serviceFee) => {
+export const updateApplicationStatus = async (id, status, adminMessage, agent, rejectionReason, serviceFee, extraAmount, extraPaymentReason, totalAmountEditReason) => {
   return apiPost(`/api/application/${id}/update-status/`, {
     status,
     admin_message: adminMessage,
     agent,
     rejection_reason: rejectionReason || null,
-    service_fee: serviceFee || null
+    service_fee: serviceFee || null,
+    extra_amount: extraAmount !== undefined ? extraAmount : null,
+    extra_payment_reason: extraPaymentReason || null,
+    total_amount_edit_reason: totalAmountEditReason || null
   });
 };
 
@@ -375,7 +378,7 @@ const agentPost = (endpoint, body = {}) => agentRequest(endpoint, { method: "POS
 const agentUpload = (endpoint, formData) =>
   agentRequest(endpoint, { method: "POST", body: formData, isForm: true });
 
-// ── Admin auth header ──
+// â-€â-€ Admin auth header â-€â-€
 // Mirrors agentHeaders/agentRequest above. Admin login stores its
 // token under the "user" key: { type: "admin", data, token }.
 const adminHeaders = (extra = {}) => {
@@ -419,21 +422,21 @@ const adminPost = (endpoint, body = {}) => adminRequest(endpoint, { method: "POS
 const adminPut = (endpoint, body = {}) => adminRequest(endpoint, { method: "PUT", body });
 const adminDelete = (endpoint) => adminRequest(endpoint, { method: "DELETE" });
 
-// ── Auth ──
+// â-€â-€ Auth â-€â-€
 export const agentLogin = async (email, password) => {
   const res = await apiPost("/api/agent/login/", { email, password });
   if (res.ok && res.data?.token) setAgentToken(res.data.token);
   return res;
 };
 
-// ── Admin — Agent CRUD (admin-only; requires the signed admin token) ──
+// â-€â-€ Admin - Agent CRUD (admin-only; requires the signed admin token) â-€â-€
 export const getAgents = () => adminGet("/api/admin/agents/");
 export const createAgent = (data) => adminPost("/api/admin/agents/", data);
 export const updateAgent = (id, data) => adminPut(`/api/admin/agents/${id}/`, data);
 export const deleteAgent = (id) => adminDelete(`/api/admin/agents/${id}/`);
 export const toggleAgent = (id) => adminPost(`/api/admin/agents/${id}/toggle/`, {});
 
-// ── Admin — Assignment (admin-only; requires the signed admin token) ──
+// â-€â-€ Admin "- Assignment (admin-only; requires the signed admin token) â-€â-€
 export const getEligibleAgents = (appId) =>
   adminGet(`/api/admin/applications/${appId}/eligible-agents/`);
 export const assignAgent = (appId, agentId) =>
@@ -445,14 +448,14 @@ export const getApplicationAssignment = (appId) =>
 export const getAllAssignments = () => adminGet("/api/admin/agent-assignments/");
 
 
-// ─────────────────────────────────────────────────────────────
+// â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€
 // Dashboard fallback
 //
 // The rich /dashboard/ endpoint is new. If the running backend
 // doesn't have it yet (404), we build the exact same payload
 // shape in the browser from /assignments/, which every version
 // of the backend has. The UI never has to care which one it got.
-// ─────────────────────────────────────────────────────────────
+// â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€â-€
 
 const FALLBACK_STATUS_LABELS = {
   ASSIGNED_TO_AGENT: "Assigned",
@@ -613,7 +616,7 @@ const buildDashboardFromAssignments = (list, agent) => {
   };
 };
 
-// ── Agent — Work dashboard (stats, today's tasks, visits, delivery, activity) ──
+// â-€â-€ Agent "- Work dashboard (stats, today's tasks, visits, delivery, activity) â-€â-€
 export const getAgentDashboard = async (agentId) => {
   const res = await agentGet(`/api/agent/${agentId}/dashboard/`);
   if (res.ok) return res;
@@ -637,7 +640,7 @@ export const getAgentDashboard = async (agentId) => {
   return res;
 };
 
-// ── Agent — Their assignments ──
+// â-€â-€ Agent "- Their assignments â-€â-€
 export const getMyAssignments = (agentId) =>
   agentGet(`/api/agent/${agentId}/assignments/`);
 export const getAssignmentDetail = (agentId, assignmentId) =>

@@ -1,4 +1,4 @@
-/** Small formatting + linking helpers shared across the agent portal. */
+﻿/** Small formatting + linking helpers shared across the agent portal. */
 
 const digits10 = (phone) => String(phone || "").replace(/\D/g, "").slice(-10);
 
@@ -28,14 +28,14 @@ export const timeAgo = (iso) => {
   return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" });
 };
 
-export const shortDate = (d, fallback = "—") => {
+export const shortDate = (d, fallback = "-") => {
   if (!d) return fallback;
   if (d === todayISO()) return "Today";
   return new Date(d).toLocaleDateString(undefined, { day: "numeric", month: "short" });
 };
 
 export const longDate = (d) =>
-  d ? new Date(d).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) : "—";
+  d ? new Date(d).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) : "-";
 
 export const weekdayLong = () =>
   new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
@@ -46,7 +46,7 @@ export const initials = (name) =>
 export const firstName = (name) => (name || "Agent").split(" ")[0];
 
 export const displayId = (a) =>
-  a?.application_display_id || (a?.application_id ? `#${a.application_id}` : "—");
+  a?.application_display_id || (a?.application_id ? `#${a.application_id}` : "-");
 
 /** Read the agent object the login flow stashed in localStorage. */
 export const readAgent = () => {

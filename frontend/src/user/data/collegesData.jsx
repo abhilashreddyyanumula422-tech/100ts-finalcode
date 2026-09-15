@@ -1,4 +1,4 @@
-const logoFiles = import.meta.glob("../../assets/colleges/logos/*", {
+﻿const logoFiles = import.meta.glob("../../assets/colleges/logos/*", {
   eager: true,
   import: "default",
 });

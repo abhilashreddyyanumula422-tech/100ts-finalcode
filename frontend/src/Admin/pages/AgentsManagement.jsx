@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+﻿import React, { useState, useEffect, useCallback } from "react";
 import {
   Users, Plus, X, Edit2, Trash2, ToggleLeft, ToggleRight,
   Search, MapPin, Briefcase, Phone, Mail, Shield, CheckCircle, XCircle
@@ -160,7 +160,7 @@ export default function AgentsManagement() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* ── Header ── */}
+      {/* â-€â-€ Header â-€â-€ */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
@@ -176,7 +176,7 @@ export default function AgentsManagement() {
         </button>
       </div>
 
-      {/* ── Stats ── */}
+      {/* â-€â-€ Stats â-€â-€ */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl p-5 shadow border border-slate-100">
           <p className="text-sm text-slate-500">Total Agents</p>
@@ -192,7 +192,7 @@ export default function AgentsManagement() {
         </div>
       </div>
 
-      {/* ── Filters ── */}
+      {/* â-€â-€ Filters â-€â-€ */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -219,7 +219,7 @@ export default function AgentsManagement() {
         </div>
       </div>
 
-      {/* ── Table ── */}
+      {/* â-€â-€ Table â-€â-€ */}
       <div className="bg-white rounded-2xl shadow border border-slate-100 overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-slate-400">Loading agents...</div>
@@ -257,7 +257,7 @@ export default function AgentsManagement() {
                       <p className="text-sm text-slate-600 flex items-center gap-1"><Phone size={12} />{a.mobile}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="text-sm text-slate-600 flex items-center gap-1"><MapPin size={12} />{a.location || "—"}</p>
+                      <p className="text-sm text-slate-600 flex items-center gap-1"><MapPin size={12} />{a.location || "-"}</p>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-slate-600">{a.experience} yr{a.experience !== 1 ? "s" : ""}</span>
@@ -305,7 +305,7 @@ export default function AgentsManagement() {
         )}
       </div>
 
-      {/* ── Add / Edit Modal ── */}
+      {/* â-€â-€ Add / Edit Modal â-€â-€ */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">

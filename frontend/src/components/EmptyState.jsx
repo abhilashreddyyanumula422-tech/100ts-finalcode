@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Inbox, FileText, Search, AlertCircle } from 'lucide-react';
 
 const EmptyState = ({ type = 'default', message, description, action }) => {

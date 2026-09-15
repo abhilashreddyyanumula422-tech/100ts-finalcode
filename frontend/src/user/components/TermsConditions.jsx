@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 const TermsConditions = ({ open, onClose }) => {
   if (!open) return null;
@@ -24,7 +24,7 @@ const TermsConditions = ({ open, onClose }) => {
             onClick={onClose}
             className="text-white text-xl"
           >
-            ✕
+            ✖
           </button>
         </div>
         <div className="h-[1px] bg-gray-200 w-full"></div>
@@ -41,7 +41,7 @@ const TermsConditions = ({ open, onClose }) => {
           </p>
 
           <p>
-            100 Transcripts LLP primarily operates controls and manages the Services provided by it from its office at New Avantika’s Orchid, Plot no. 801, Mathrusree Nagar, Hyderabad, Telangana 500049.
+            100 Transcripts LLP primarily operates controls and manages the Services provided by it from its office at New Avantika's Orchid, Plot no. 801, Mathrusree Nagar, Hyderabad, Telangana 500049.
           </p>
 
           <p>
@@ -53,7 +53,7 @@ const TermsConditions = ({ open, onClose }) => {
           </p>
 
           <p>
-            We process & provide a professional review of your document’s application to assure the fastest possible processing.
+            We process & provide a professional review of your document's application to assure the fastest possible processing.
           </p>
 
           <p>

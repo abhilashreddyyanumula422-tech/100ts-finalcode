@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Link } from "react-router-dom";
 import { CalendarClock, MapPin, Navigation, Building2 } from "lucide-react";
 import { Section, EmptyState, ActionButton } from "../ui";
@@ -14,8 +14,8 @@ function VisitRow({ visit: v }) {
           </p>
           <p className="text-[12px] text-slate-500 mt-0.5">
             {v.student}
-            <span className="mx-1.5 text-slate-300">·</span>
-            <span className="tabular-nums">{v.application_display_id || "—"}</span>
+            <span className="mx-1.5 text-slate-300">Â·</span>
+            <span className="tabular-nums">{v.application_display_id || "-"}</span>
           </p>
           {v.address && (
             <p className="text-[12px] text-slate-400 flex items-center gap-1.5 mt-1">
@@ -28,7 +28,7 @@ function VisitRow({ visit: v }) {
                       : "bg-slate-50 text-slate-500 ring-slate-200"
         }`}>
           {v.scheduled ? shortDate(v.visit_date) : "Not scheduled"}
-          {v.visit_time ? ` · ${v.visit_time}` : ""}
+          {v.visit_time ? ` Â· ${v.visit_time}` : ""}
         </span>
       </div>
 

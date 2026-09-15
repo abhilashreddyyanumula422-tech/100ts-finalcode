@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Zap, CheckCircle2, XCircle, ArrowRight, Upload, AlertCircle } from "lucide-react";
 import { Section, ActionButton, Banner } from "../ui";
 import { statusLabel } from "../../constants/workflow";
@@ -57,7 +57,6 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
   };
 
   const handleApprove = async () => {
-    if (!refNum) return onNotify?.("Reference number required", true);
     setBusy(true);
     const fd = new FormData();
     fd.append("decision", "APPROVED");
@@ -146,7 +145,7 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
                   
                   {a.active_issue.status === 'USER_RESPONDED' ? (
                     <div className="bg-emerald-50/70 p-3 rounded-lg border border-emerald-100 mt-2 space-y-2">
-                      <p className="text-emerald-950 font-bold">🟢 User Response Received:</p>
+                      <p className="text-emerald-950 font-bold">ðŸŸ¢ User Response Received:</p>
                       <p className="text-slate-800 italic">"{a.active_issue.user_response || 'No message provided.'}"</p>
                       
                       {a.active_issue.documents && a.active_issue.documents.length > 0 && (
@@ -161,7 +160,7 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
                                 rel="noopener noreferrer"
                                 className="text-[11px] font-bold text-blue-700 bg-blue-50 ring-1 ring-inset ring-blue-200 hover:bg-blue-100 px-2 py-1 rounded-md transition"
                               >
-                                📄 {doc.name}
+                                ðŸ“„ {doc.name}
                               </a>
                             ))}
                           </div>
@@ -177,7 +176,7 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
                   ) : (
                     <div className="pt-2 border-t border-amber-200/50 space-y-3">
                       <p className="text-amber-700 font-medium italic flex items-center gap-1">
-                        ⏳ Waiting for student response...
+                        â³ Waiting for student response...
                       </p>
                       <div className="bg-white p-3 rounded-lg border border-slate-200">
                         <p className="text-[12px] text-slate-500 mb-2">If you received the corrected details directly via WhatsApp or Email, click below to proceed:</p>
@@ -191,7 +190,7 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
               ) : (
                 <div className="pt-2 space-y-2">
                   <p className="text-amber-700 font-medium italic flex items-center gap-1">
-                    ⏳ Waiting for student response...
+                    â³ Waiting for student response...
                   </p>
                   <div className="bg-white p-3 rounded-lg border border-slate-200">
                     <p className="text-[12px] text-slate-500 mb-2">Click below to resolve the issue manually and continue processing:</p>
@@ -211,15 +210,12 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
             <ActionButton variant="success" full loading={busy} onClick={() => run(() => acceptAssignment(agentId, assignmentId), "Assignment accepted")}>
               Accept Assignment
             </ActionButton>
-            <ActionButton variant="dangerSubtle" full disabled={busy} onClick={() => setShowReject(true)}>
-              Reject
-            </ActionButton>
           </div>
         )}
 
         {a.status === "ACCEPTED" && (
-          <ActionButton variant="accent" full loading={busy} onClick={() => advance("IN_PROGRESS", "Started college visit")}>
-            Start College Visit
+          <ActionButton variant="accent" full loading={busy} onClick={() => advance("IN_PROGRESS", "Started processing")}>
+            Start Processing
           </ActionButton>
         )}
 
@@ -234,9 +230,6 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
           <div className="flex gap-3">
             <ActionButton variant="success" full disabled={busy} onClick={() => setShowDocs(true)}>
               Approve
-            </ActionButton>
-            <ActionButton variant="dangerSubtle" full disabled={busy} onClick={() => setShowReject(true)}>
-              Reject
             </ActionButton>
             <ActionButton variant="dangerSubtle" full disabled={busy} onClick={() => setShowIssue(true)}>
               Report Issue
@@ -296,24 +289,8 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
             </div>
 
             <div>
-              <p className="text-[12px] font-bold mb-1">Tracking URL</p>
-              <input type="url" value={trackingUrl} onChange={e => setTrackingUrl(e.target.value)} placeholder="e.g. https://delhivery.com/track" className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-[13px]" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-[12px] font-bold mb-1">Dispatch Date *</p>
-                <input type="date" value={dispatchDate} onChange={e => setDispatchDate(e.target.value)} className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-[13px]" />
-              </div>
-              <div>
-                <p className="text-[12px] font-bold mb-1">Expected Delivery</p>
-                <input type="date" value={expectedDeliveryDate} onChange={e => setExpectedDeliveryDate(e.target.value)} className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-[13px]" />
-              </div>
-            </div>
-
-            <div>
-              <p className="text-[12px] font-bold mb-1">Remarks</p>
-              <textarea value={deliveryRemarks} onChange={e => setDeliveryRemarks(e.target.value)} placeholder="Any specific notes..." className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-[13px] resize-none" rows="2"></textarea>
+              <p className="text-[12px] font-bold mb-1">Dispatch Date *</p>
+              <input type="date" value={dispatchDate} onChange={e => setDispatchDate(e.target.value)} className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-[13px]" />
             </div>
 
             <div className="flex gap-2 pt-2">

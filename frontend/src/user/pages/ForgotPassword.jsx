@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Mail, ArrowLeft, CheckCircle2, ShieldCheck } from "lucide-react";
@@ -32,14 +32,14 @@ const ForgotPassword = () => {
           setResetData(data);
           setIsSent(true);
         } else {
-          alert("No account found with this email");
+          console.log("No account found with this email");
         }
       } else {
-        alert(data.error || "Failed to send reset link");
+        console.log(data.error || "Failed to send reset link");
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Server error. Please try again.");
+      console.log("Server error. Please try again.");
     } finally {
       setLoading(false);
     }

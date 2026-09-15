@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Landmark } from "lucide-react";
 import { Section, Field, ActionButton } from "../ui";
 import UniversityDecisionSection from "../UniversityDecisionSection";
@@ -73,7 +73,7 @@ export default function DecisionPanel({ assignment: a, agentId, assignmentId, on
               </ActionButton>
             ) : (
               <p className="text-[12px] text-slate-400">
-                This request has moved past the university stage — the decision is locked.
+                This request has moved past the university stage - the decision is locked.
               </p>
             )}
           </div>

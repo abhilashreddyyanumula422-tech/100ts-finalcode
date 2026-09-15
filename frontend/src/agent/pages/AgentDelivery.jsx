@@ -1,11 +1,11 @@
-import React from "react";
+﻿import React from "react";
 import { useAgentData } from "../context/AgentDataContext";
 import { PageLoading, PageError, PageHeader } from "../components/PageState";
 import { DeliveryQueue } from "../components/dashboard";
 
 export default function AgentDelivery() {
   const { data, loading, error, reload } = useAgentData();
-  if (loading) return <PageLoading label="Loading deliveries…" />;
+  if (loading) return <PageLoading label="Loading deliveries..." />;
   if (error && !data) return <PageError message={error} onRetry={() => reload()} />;
 
   const rows = data?.deliveries || [];
@@ -14,7 +14,7 @@ export default function AgentDelivery() {
     <>
       <PageHeader
         title="Delivery"
-        subtitle={`${dispatched} dispatched · ${rows.length - dispatched} awaiting courier details`}
+        subtitle={`${dispatched} dispatched Â· ${rows.length - dispatched} awaiting courier details`}
       />
       <DeliveryQueue deliveries={rows} />
     </>

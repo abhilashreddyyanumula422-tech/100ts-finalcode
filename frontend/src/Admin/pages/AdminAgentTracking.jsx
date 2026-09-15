@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+﻿import React, { useState, useEffect, useCallback } from "react";
 import { Activity, RefreshCw, Search, ChevronDown, ChevronUp, MessageSquare } from "lucide-react";
 import { getAllAssignments } from "../../services/api";
 
@@ -95,7 +95,7 @@ function AssignmentRow({ assignment }) {
           {assignment.agent ? (
             <div>
               <p className="text-sm font-semibold text-slate-800">{assignment.agent.name}</p>
-              <p className="text-xs text-slate-400">{assignment.agent.location || "—"}</p>
+              <p className="text-xs text-slate-400">{assignment.agent.location || "-"}</p>
             </div>
           ) : (
             <span className="text-xs text-red-500 font-semibold">Unassigned</span>
@@ -122,7 +122,7 @@ function AssignmentRow({ assignment }) {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase mb-1">University</p>
-                <p className="text-sm text-slate-700">{assignment.university || "—"}</p>
+                <p className="text-sm text-slate-700">{assignment.university || "-"}</p>
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase mb-1">Latest Progress Note</p>
@@ -162,7 +162,7 @@ function AssignmentRow({ assignment }) {
                     </div>
                     <div>
                       <p className="text-xs text-slate-500 mb-0.5">Dispatch Date</p>
-                      <p className="text-sm font-semibold text-slate-800">{assignment.dispatch_date || "—"}</p>
+                      <p className="text-sm font-semibold text-slate-800">{assignment.dispatch_date || "-"}</p>
                     </div>
                     <div>
                       {assignment.tracking_url && (

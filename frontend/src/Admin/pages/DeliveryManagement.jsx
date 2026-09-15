@@ -1,4 +1,4 @@
-
+﻿
 import { Mail, Send } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import React, { useState, useEffect } from 'react';
@@ -29,7 +29,7 @@ const DeliveryManagement = () => {
       setLoading(false);
     }
   };
-  // 🟢 Filter & Search Logic
+  // ðŸŸ¢ Filter & Search Logic
   const filteredDeliveries = deliveries.filter(d => {
     const matchesSearch = d.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.student.toLowerCase().includes(searchQuery.toLowerCase());
@@ -72,7 +72,7 @@ Expected Delivery: ${selectedTracking.estDelivery}
   return (
     <div className="min-h-screen bg-slate-50 p-6 font-sans text-slate-900 relative pb-24">
 
-      {/* 🟢 HEADER SECTION */}
+      {/* ðŸŸ¢ HEADER SECTION */}
       <div className="max-w-7xl mx-auto mb-10">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
           <div>
@@ -106,57 +106,73 @@ Expected Delivery: ${selectedTracking.estDelivery}
         </div>
       </div>
 
-      {/* 🟢 SHIPMENT DATA SECTION */}
+      {/* ðŸŸ¢ SHIPMENT DATA SECTION */}
       <div className="max-w-7xl mx-auto">
 
         {/* --- DESKTOP VIEW (TABLE) --- */}
-        <div className="hidden md:block bg-white border border-slate-200 rounded-[2.5rem] shadow-xl overflow-hidden">
-          <table className="w-full text-left">
+        <div className="hidden md:block bg-white/90 backdrop-blur-xl border border-slate-100 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-100">
-                <th className="px-8 py-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Tracking Detail</th>
-                <th className="px-8 py-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Student</th>
-                <th className="px-8 py-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Last Hub</th>
-                <th className="px-8 py-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Status</th>
-                <th className="px-8 py-6 text-[11px] font-black uppercase tracking-widest text-slate-400 text-right">Action</th>
+              <tr className="bg-slate-50/50 border-b border-slate-100">
+                <th className="px-8 py-5 text-[12px] font-bold uppercase tracking-wider text-slate-400">Tracking Detail</th>
+                <th className="px-8 py-5 text-[12px] font-bold uppercase tracking-wider text-slate-400">Student</th>
+                <th className="px-8 py-5 text-[12px] font-bold uppercase tracking-wider text-slate-400">Last Hub</th>
+                <th className="px-8 py-5 text-[12px] font-bold uppercase tracking-wider text-slate-400">Status</th>
+                <th className="px-8 py-5 text-[12px] font-bold uppercase tracking-wider text-slate-400 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-100/80">
               {filteredDeliveries.length > 0 ? (
                 filteredDeliveries.map((item) => (
-                  <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group">
-                    <td className="px-8 py-6">
+                  <tr key={item.id} className="hover:bg-blue-50/40 transition-all duration-300 group cursor-pointer" onClick={() => setSelectedTracking(item)}>
+                    <td className="px-8 py-5">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-500 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                          <Package size={22} />
+                        <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-blue-500 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-lg group-hover:-translate-y-0.5 transition-all duration-300">
+                          <Package size={20} strokeWidth={2.5} />
                         </div>
                         <div>
-                          <p className="text-sm font-black text-blue-600">{item.id}</p>
-                          <p className="text-xs font-bold text-slate-500">{item.item}</p>
+                          <p className="text-[15px] font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{item.id}</p>
+                          <p className="text-[13px] font-medium text-slate-500 mt-0.5">{item.item}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-8 py-6 font-bold text-slate-800 text-sm">{item.student}</td>
-                    <td className="px-8 py-6 text-sm font-semibold text-slate-600">{item.currentLocation}</td>
-                    <td className="px-8 py-6">
-                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${item.status === 'Delivered' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-blue-600 border-blue-100'
+                    <td className="px-8 py-5">
+                      <div className="text-[15px] font-semibold text-slate-700">{item.student}</div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-2 text-[14px] font-medium text-slate-600">
+                        <MapPin size={16} className="text-slate-400" />
+                        {item.currentLocation}
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${item.status === 'Delivered' ? 'bg-emerald-50 text-emerald-600 border-emerald-200/50' : 'bg-indigo-50 text-indigo-600 border-indigo-200/50'
                         }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${item.status === 'Delivered' ? 'bg-emerald-500' : 'bg-indigo-500 animate-pulse'}`}></span>
                         {item.status}
                       </span>
                     </td>
-                    <td className="px-8 py-6 text-right">
+                    <td className="px-8 py-5 text-right">
                       <button
-                        onClick={() => setSelectedTracking(item)}
-                        className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-blue-600 transition-all shadow-lg active:scale-95"
+                        onClick={(e) => { e.stopPropagation(); setSelectedTracking(item); }}
+                        className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-[13px] font-bold hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95 flex items-center gap-2 ml-auto"
                       >
-                        Track
+                        <Eye size={16} /> View
                       </button>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="px-8 py-20 text-center text-slate-400 font-bold">No Shipments Found</td>
+                  <td colSpan="5" className="px-8 py-24 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
+                        <Package size={28} />
+                      </div>
+                      <p className="text-slate-500 font-semibold text-[15px]">No shipments found</p>
+                      <p className="text-slate-400 text-[13px] mt-1">Try adjusting your search filters.</p>
+                    </div>
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -167,49 +183,50 @@ Expected Delivery: ${selectedTracking.estDelivery}
         <div className="block md:hidden space-y-4">
           {filteredDeliveries.length > 0 ? (
             filteredDeliveries.map((item) => (
-              <div key={item.id} className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col gap-4">
+              <div key={item.id} onClick={() => setSelectedTracking(item)} className="bg-white/90 backdrop-blur-xl border border-slate-100 rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-lg transition-all duration-300 flex flex-col gap-5 cursor-pointer group active:scale-[0.98]">
 
                 {/* Card Header */}
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500">
-                      <Package size={18} />
+                    <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-blue-500 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                      <Package size={20} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <p className="text-sm font-black text-blue-600">{item.id}</p>
-                      <p className="text-[11px] font-bold text-slate-500 line-clamp-1">{item.item}</p>
+                      <p className="text-[15px] font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{item.id}</p>
+                      <p className="text-[12px] font-medium text-slate-500 line-clamp-1">{item.item}</p>
                     </div>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border whitespace-nowrap mt-1 ${item.status === 'Delivered' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-blue-600 border-blue-100'
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap mt-1 ${item.status === 'Delivered' ? 'bg-emerald-50 text-emerald-600 border-emerald-200/50' : 'bg-indigo-50 text-indigo-600 border-indigo-200/50'
                     }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${item.status === 'Delivered' ? 'bg-emerald-500' : 'bg-indigo-500 animate-pulse'}`}></span>
                     {item.status}
                   </span>
                 </div>
 
                 {/* Info Grid */}
-                <div className="grid grid-cols-2 gap-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <div className="grid grid-cols-2 gap-y-4 bg-slate-50/60 p-4 rounded-2xl border border-slate-100/50">
                   <div>
-                    <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Student</span>
-                    <span className="text-sm font-bold text-slate-800">{item.student}</span>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Student</span>
+                    <span className="text-[13px] font-semibold text-slate-700">{item.student}</span>
                   </div>
                   <div>
-                    <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Courier</span>
-                    <span className="text-sm font-bold text-slate-800">{item.courierPartner}</span>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Courier</span>
+                    <span className="text-[13px] font-semibold text-slate-700">{item.courierPartner}</span>
                   </div>
-                  <div className="col-span-2 pt-1 border-t border-slate-200 mt-1">
-                    <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Last Hub</span>
-                    <span className="text-sm font-bold text-slate-600 flex items-center gap-1">
-                      <MapPin size={12} className="text-blue-500" /> {item.currentLocation}
+                  <div className="col-span-2 pt-3 border-t border-slate-200/50">
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Last Hub</span>
+                    <span className="text-[13px] font-medium text-slate-600 flex items-center gap-1.5">
+                      <MapPin size={14} className="text-slate-400" /> {item.currentLocation}
                     </span>
                   </div>
                 </div>
 
                 {/* Actions */}
                 <button
-                  onClick={() => setSelectedTracking(item)}
-                  className="w-full py-3 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-blue-600 transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
+                  onClick={(e) => { e.stopPropagation(); setSelectedTracking(item); }}
+                  className="w-full py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-[13px] font-bold group-hover:bg-slate-900 group-hover:text-white group-hover:border-slate-900 transition-all duration-300 shadow-sm flex items-center justify-center gap-2"
                 >
-                  <Search size={14} /> Track Shipment
+                  <Eye size={16} /> View Details
                 </button>
               </div>
             ))
@@ -222,7 +239,7 @@ Expected Delivery: ${selectedTracking.estDelivery}
         </div>
       </div>
 
-      {/* 🟢 FILTER MODAL */}
+      {/* ðŸŸ¢ FILTER MODAL */}
       {isFilterOpen && (
         <div className="fixed inset-0 z-[110] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 space-y-6 animate-in zoom-in-95 duration-200">

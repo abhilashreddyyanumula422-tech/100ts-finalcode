@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
 import PrivacyPolicy from "./PrivacyPolicy";
@@ -286,7 +286,7 @@ const Footer = () => {
         <div className="flex flex-col gap-4 pt-6 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
 
           <p className="text-center sm:text-left">
-            © {currentYear} 100 Transcripts LLP. All rights reserved.
+            Â© {currentYear} 100 Transcripts LLP. All rights reserved.
           </p>
 
 

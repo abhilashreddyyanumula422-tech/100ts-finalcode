@@ -1,8 +1,8 @@
-import React from "react";
+﻿import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
 
 /**
- * AgentProtectedRoute — guards all /agent/... routes
+ * AgentProtectedRoute "- guards all /agent/... routes
  * Redirects to /agent/login if not authenticated as an agent.
  */
 const AgentProtectedRoute = () => {

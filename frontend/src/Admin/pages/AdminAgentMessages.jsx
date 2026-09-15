@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+﻿import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { API_BASE_URL } from "../../services/api";
 import useAdminAgentWebSocket from "../hooks/useAdminAgentWebSocket";
@@ -174,7 +174,7 @@ const handleSendMessage = (e) => {
   );
 
   if (!success) {
-    alert("WebSocket is not connected.");
+    console.log("WebSocket is not connected.");
     return;
   }
 

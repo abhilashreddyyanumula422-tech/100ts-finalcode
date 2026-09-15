@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { getReviews, submitReview } from "../../services/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, X, Send, User, MessageSquare, CheckCircle } from "lucide-react";
@@ -17,7 +17,7 @@ const itemVariants = {
   visible: { opacity: 1, y: 0 },
 };
 
-/* ── Modal overlay + card animations ── */
+/* â-€â-€ Modal overlay + card animations â-€â-€ */
 const backdropVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1 },
@@ -77,7 +77,7 @@ const Reviews = () => {
     }
   ]);
 
-  /* ── Modal state ── */
+  /* â-€â-€ Modal state â-€â-€ */
   const [showModal, setShowModal] = useState(false);
   const [hoverRating, setHoverRating] = useState(0);
   const [selectedRating, setSelectedRating] = useState(0);
@@ -158,7 +158,7 @@ const Reviews = () => {
         </motion.div>
       </div>
 
-      {/* ── Scrolling review cards ── */}
+      {/* â-€â-€ Scrolling review cards â-€â-€ */}
       <div className="relative flex">
         <div className="pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-32 bg-gradient-to-r from-white to-transparent" />
         <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-32 bg-gradient-to-l from-white to-transparent" />
@@ -216,7 +216,7 @@ const Reviews = () => {
         </motion.div>
       </div>
 
-      {/* ── Give Review Button ── */}
+      {/* â-€â-€ Give Review Button â-€â-€ */}
       <motion.div
         className="mt-12 flex justify-center"
         initial={{ opacity: 0, y: 20 }}
@@ -247,9 +247,9 @@ const Reviews = () => {
         </motion.button>
       </motion.div>
 
-      {/* ══════════════════════════════════════════
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
           ✨  GIVE REVIEW MODAL
-      ══════════════════════════════════════════ */}
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <AnimatePresence>
         {showModal && (
           <motion.div
@@ -454,7 +454,7 @@ const Reviews = () => {
                       </form>
                     </motion.div>
                   ) : (
-                    /* ── Success state ── */
+                    /* â-€â-€ Success state â-€â-€ */
                     <motion.div
                       key="success"
                       initial={{ opacity: 0, scale: 0.8 }}
@@ -480,7 +480,7 @@ const Reviews = () => {
                         <CheckCircle size={40} className="text-white" />
                       </motion.div>
                       <h3 className="text-2xl font-bold text-[#2f4a6d]">
-                        Thank You! 🎉
+                        Thank You! ðŸŽ‰
                       </h3>
                       <p className="mt-3 max-w-xs text-sm text-gray-400">
                         Your review has been submitted successfully. We truly

@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiSearch, FiArrowRight, FiAward, FiStar, FiTrendingUp, FiShield, FiChevronLeft, FiChevronRight } from "react-icons/fi";
@@ -244,7 +244,7 @@ const Universities = () => {
           {/* Results count */}
           <div className="flex items-center justify-between mb-6">
             <p className="text-sm font-bold text-slate-500">
-              Showing {startIdx + 1}–{Math.min(startIdx + ITEMS_PER_PAGE, filteredColleges.length)} of {filteredColleges.length} universities
+              Showing {startIdx + 1}-{Math.min(startIdx + ITEMS_PER_PAGE, filteredColleges.length)} of {filteredColleges.length} universities
             </p>
           </div>
 

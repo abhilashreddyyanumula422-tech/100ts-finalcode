@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 /** A titled content card. The one container everything on these pages lives in. */
 export default function Section({ title, subtitle, icon, count, actions, children, padded = false }) {

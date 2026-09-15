@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 const PrivacyPolicy = ({ open, onClose }) => {
   if (!open) return null;
@@ -6,13 +6,13 @@ const PrivacyPolicy = ({ open, onClose }) => {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center">
       
-      {/* 🔥 BLUR BACKGROUND */}
+      {/* ðŸ-¥ BLUR BACKGROUND */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       ></div>
 
-      {/* 🔥 CARD */}
+      {/* ðŸ-¥ CARD */}
      <div className="relative z-10 w-[95%] max-w-5xl max-h-[85vh] overflow-hidden rounded-3xl bg-white shadow-[0_20px_60px_rgba(0,0,0,0.25)] border border-white/20">
   
   {/* HEADER */}
@@ -24,7 +24,7 @@ const PrivacyPolicy = ({ open, onClose }) => {
       onClick={onClose}
       className="text-white hover:text-gray-200 text-xl"
     >
-      ✕
+      ✖
     </button>
   </div>
 
@@ -83,17 +83,17 @@ const PrivacyPolicy = ({ open, onClose }) => {
           <h3 className="text-lg font-bold text-[#2f4a6d] mt-6 mb-2 border-l-4 border-[#2f4a6d] pl-3">Cookies</h3>
 
           <p>
-            Cookies are files with little information, which may consist of a unique anonymous identifier. Cookies are driven to your browser from our website and stored on your PC’s hard drive. Like more than a few websites, we make use of “cookies” to collect data. You can instruct your browser to turn down all cookies or to point out when a cookie is being sent. Nevertheless, if you do not accept cookies, you might not be able to use some segments of our website.
+            Cookies are files with little information, which may consist of a unique anonymous identifier. Cookies are driven to your browser from our website and stored on your PC's hard drive. Like more than a few websites, we make use of "cookies" to collect data. You can instruct your browser to turn down all cookies or to point out when a cookie is being sent. Nevertheless, if you do not accept cookies, you might not be able to use some segments of our website.
           </p>
 
           <h3 className="text-lg font-bold text-[#2f4a6d] mt-6 mb-2 border-l-4 border-[#2f4a6d] pl-3">Log Data</h3>
 
           <p>
-            Like a lot of website operators, we collect data that your browser sends every time you visit our website (“Log Data”).
+            Like a lot of website operators, we collect data that your browser sends every time you visit our website ("Log Data").
           </p>
 
           <p>
-            This Log Data might take account of information such as your PC’s Internet Protocol (“IP”) address, type of browser, version of the browser, the pages of our website that you visit, the time as well as the date of your visit, the time used up on those WebPages and other figures.
+            This Log Data might take account of information such as your PC's Internet Protocol ("IP") address, type of browser, version of the browser, the pages of our website that you visit, the time as well as the date of your visit, the time used up on those WebPages and other figures.
           </p>
 
           <p>

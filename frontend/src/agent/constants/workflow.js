@@ -1,4 +1,4 @@
-/**
+﻿/**
  * The agent workflow, in one place.
  * The backend owns the real state machine; these maps only describe how each
  * state is *presented*. Keep them in sync with App/views_agent.py.
@@ -50,7 +50,7 @@ export const NEXT_ACTION = {
   OUT_FOR_DELIVERY: { status: "DELIVERED", label: "Mark Delivered" },
   DELIVERED: { status: "COMPLETED", label: "Close & Mark Completed" },
   ADDITIONAL_DOC_REQUIRED: { status: "SUBMITTED_TO_UNIVERSITY", label: "Re-submit to University" },
-  REJECTED_BY_UNIVERSITY: { status: "IN_PROGRESS", label: "Retry — Back to In Progress" },
+  REJECTED_BY_UNIVERSITY: { status: "IN_PROGRESS", label: "Retry - Back to In Progress" },
 };
 
 /** The happy path, for the vertical tracker. */

@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Link } from "react-router-dom";
 import { Clock, MapPin, Building2, FileText, Navigation, MessageCircle, CheckCircle2 } from "lucide-react";
 import { Section, EmptyState, StatusPill, ActionButton } from "../ui";
@@ -7,7 +7,7 @@ import { nextActionFor } from "../../constants/workflow";
 
 function TaskRow({ task }) {
   const next = nextActionFor(task);
-  const route = [task.route_from, task.route_to].filter(Boolean).join(" → ");
+  const route = [task.route_from, task.route_to].filter(Boolean).join(" â†’ ");
   const ref = displayId(task);
 
   return (
@@ -53,7 +53,7 @@ function TaskRow({ task }) {
       {next && (
         <p className="text-[12px] text-slate-600 bg-slate-50 ring-1 ring-inset ring-slate-200/70 rounded-lg px-3 py-2">
           <span className="text-slate-400 font-medium">Next step</span>
-          <span className="mx-1.5 text-slate-300">·</span>
+          <span className="mx-1.5 text-slate-300">Â·</span>
           <span className="font-semibold text-slate-800">{next.label}</span>
         </p>
       )}

@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { motion } from "framer-motion";
 import degreeImage from "../../assets/degree.png";
 import marksMemoImage from "../../assets/marksmemo.png";

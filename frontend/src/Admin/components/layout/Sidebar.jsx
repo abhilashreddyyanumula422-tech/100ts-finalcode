@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import logo from "../../../assets/100.png";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -50,7 +50,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
     navigate("/login");
   };
 
-  // 🔹 MAIN MENU
+  // ðŸ-¹ MAIN MENU
   const menuItems = [
     { name: "Dashboard", path: "/admin/dashboard", icon: <LayoutDashboard size={20} /> },
     { name: "Student Requests", path: "/admin/student-requests", icon: <Users size={20} /> },
@@ -61,7 +61,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
     { name: "Agent Tracking", path: "/admin/agent-tracking", icon: <Activity size={20} /> },
     { name: "Agent Support", path: "/admin/agent-support", icon: <MessageSquare size={20} /> },
   ];
-  // 🔸 PARTNER MENU
+  // ðŸ-¸ PARTNER MENU
   const partnerItems = [
     // { name: "Settings", path: "/settings", icon: <Settings size={20} /> },
   ];
@@ -71,7 +71,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
       {/* Desktop Sidebar */}
       <div className="hidden md:flex w-72 h-screen flex-col text-white bg-gradient-to-b from-[#0b2a4a] to-[#081f36] shadow-xl border-r border-white/5">
 
-        {/* 🔵 LOGO */}
+        {/* ðŸ-µ LOGO */}
         <div className="p-6 border-b border-white/10">
           <div className="flex items-center gap-4">
 
@@ -90,10 +90,10 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
           </div>
         </div>
 
-        {/* 📌 MENU */}
+        {/* ðŸ“Œ MENU */}
         <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto custom-scrollbar">
 
-          {/* 🔹 MAIN SECTION */}
+          {/* ðŸ-¹ MAIN SECTION */}
           <div>
             <p className="text-xs text-slate-400 px-3 mb-2 uppercase tracking-wider font-semibold">
               Main
@@ -130,7 +130,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
             </div>
           </div>
 
-          {/* 🔸 PARTNER SECTION */}
+          {/* ðŸ-¸ PARTNER SECTION */}
           <div>
             <p className="text-xs text-slate-400 px-3 mb-2 uppercase tracking-wider font-semibold">
               System
@@ -160,7 +160,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
           </div>
         </nav>
 
-        {/* 🔻 FOOTER */}
+        {/* ðŸ-» FOOTER */}
         <div className="p-4 border-t border-white/5">
           <div className="bg-white/5 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-4">
@@ -192,7 +192,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
             className="w-72 h-full flex flex-col text-white bg-gradient-to-b from-[#0b2a4a] to-[#081f36] shadow-xl animate-in slide-in-from-left duration-300"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* 🔵 LOGO */}
+            {/* ðŸ-µ LOGO */}
             <div className="p-6 border-b border-white/5 flex justify-between items-center">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
@@ -213,10 +213,10 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
               </button>
             </div>
 
-            {/* 📌 MENU */}
+            {/* ðŸ“Œ MENU */}
             <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto custom-scrollbar">
 
-              {/* 🔹 MAIN SECTION */}
+              {/* ðŸ-¹ MAIN SECTION */}
               <div>
                 <p className="text-xs text-slate-400 px-3 mb-2 uppercase tracking-wider font-semibold">
                   Main
@@ -254,7 +254,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
                 </div>
               </div>
 
-              {/* 🔸 PARTNER SECTION */}
+              {/* ðŸ-¸ PARTNER SECTION */}
               <div>
                 <p className="text-xs text-slate-400 px-3 mb-2 uppercase tracking-wider font-semibold">
                   System
@@ -285,7 +285,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
               </div>
             </nav>
 
-            {/* 🔻 FOOTER */}
+            {/* ðŸ-» FOOTER */}
             <div className="p-4 border-t border-white/5">
               <div className="bg-white/5 rounded-2xl p-4">
                 <button

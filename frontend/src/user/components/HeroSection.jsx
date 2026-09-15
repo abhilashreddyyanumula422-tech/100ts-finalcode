@@ -129,7 +129,7 @@ const HeroSection = () => {
             transition={{ duration: 0.8 }}
           >
             <h1 className="text-3xl md:text-4xl lg:text-[40px] font-bold text-[#0f2851] leading-tight tracking-tight">
-              India’s #1 Trusted <br />
+              India's #1 Trusted <br />
               <span className="bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent">Transcripts</span>   Provider
             </h1>
           </motion.div>
@@ -355,7 +355,7 @@ const HeroSection = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1 }}
           >
-            Your Gateway to <span className="bg-gradient-to-r from-blue-600 to-cyan-400 text-white px-2 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider mx-1">GLOBAL</span> Education and Career – Providing official university transcripts and evaluation support.
+            Your Gateway to <span className="bg-gradient-to-r from-blue-600 to-cyan-400 text-white px-2 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider mx-1">GLOBAL</span> Education and Career - Providing official university transcripts and evaluation support.
           </motion.p>
 
           <div className="relative w-full">

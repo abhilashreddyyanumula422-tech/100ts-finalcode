@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+﻿import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { API_BASE_URL } from "../../services/api";
 import useAgentWebSocket from "../hooks/useAgentWebSocket";
@@ -159,7 +159,7 @@ const handleSendMessage = async (e) => {
     // WebSocket currently handles text messages.
     // Attachment handling will be done separately.
     if (attachment) {
-        alert("Attachments will be handled separately.");
+        console.log("Attachments will be handled separately.");
         return;
     }
 
@@ -175,11 +175,11 @@ const handleSendMessage = async (e) => {
         if (success) {
             setNewMessage("");
         } else {
-            alert("WebSocket is not connected.");
+            console.log("WebSocket is not connected.");
         }
     } catch (err) {
         console.error(err);
-        alert("Error sending message.");
+        console.log("Error sending message.");
     } finally {
         setSending(false);
     }
@@ -330,7 +330,17 @@ const handleSendMessage = async (e) => {
                       </span>
                     </div>
                   </div>
-                  <button className="flex items-center justify-center gap-2 text-slate-600 bg-slate-50 border border-slate-200 hover:bg-slate-100 px-4 py-2 rounded-lg text-[13px] font-semibold transition">
+                  <button 
+                    onClick={() => {
+                      const activeAssn = assignments.find(a => a.application_id?.toString() === appId);
+                      if (activeAssn && activeAssn.id) {
+                        navigate(`/agent/requests/${activeAssn.id}`);
+                      } else {
+                        // Fallback if not found in assignments array
+                        console.log("Assignment details not found yet. Please try again.");
+                      }
+                    }}
+                    className="flex items-center justify-center gap-2 text-slate-600 bg-slate-50 border border-slate-200 hover:bg-slate-100 px-4 py-2 rounded-lg text-[13px] font-semibold transition">
                     <FileText size={14} /> View Application
                   </button>
                 </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { getAssignmentDetail } from "../../services/api";
 
 /** Loads a single assignment and exposes a transient toast message. */
@@ -16,7 +16,7 @@ export default function useAssignment(agentId, assignmentId) {
       if (res.ok) { setAssignment(res.data); setError(""); }
       else setError(res.data?.error || "Assignment not found, or you don't have access to it.");
     } catch {
-      setError("Network error — is the backend running?");
+      setError("Network error - is the backend running?");
     } finally {
       setLoading(false);
     }

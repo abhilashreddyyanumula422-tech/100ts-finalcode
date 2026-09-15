@@ -2345,6 +2345,27 @@ def submit_application(request):
         data = request.POST if request.POST else request.data
         print(f"DEBUG DATA: {data}")
 
+        captcha_token = data.get("captcha_token")
+        if not captcha_token:
+            return Response({"error": "Please complete the CAPTCHA verification."}, status=400)
+
+        import requests
+        import os
+        recaptcha_secret = os.environ.get("RECAPTCHA_SECRET_KEY")
+        if not recaptcha_secret:
+            return Response({"error": "Server misconfiguration: CAPTCHA secret missing."}, status=500)
+            
+        try:
+            res = requests.post('https://www.google.com/recaptcha/api/siteverify', data={
+                'secret': recaptcha_secret,
+                'response': captcha_token
+            }, timeout=5)
+            result = res.json()
+            if not result.get('success', False):
+                return Response({"error": "CAPTCHA verification failed. Please try again."}, status=400)
+        except Exception:
+            return Response({"error": "CAPTCHA verification failed. Please try again."}, status=400)
+
         name_err = validate_name_backend(data.get("fullName"))
         if name_err: return Response({"error": name_err}, status=400)
 
@@ -2623,8 +2644,59 @@ def update_status(request, id=None):
             if status == "rejected" and rejection_reason:
                 app.rejection_reason = rejection_reason.strip()
             if service_fee is not None:
+                old_total = app.total_amount
                 app.service_fee = service_fee
                 app.total_amount = service_fee
+                total_amount_edit_reason = data.get("total_amount_edit_reason")
+                if total_amount_edit_reason:
+                    app.total_amount_edit_reason = total_amount_edit_reason
+                
+                if app.total_amount and float(app.total_amount) > float(app.paid_amount or 0) and app.total_amount != old_total:
+                    app.payment_status = "Pending"
+                    from .utils import send_interakt_template
+                    try:
+                        remaining_balance = float(app.total_amount) - float(app.paid_amount or 0)
+                        send_interakt_template(
+                            phone_number=app.phone,
+                            template_name="payment_update",
+                            variables=[app.fullName, str(remaining_balance), app.total_amount_edit_reason or "Remaining Balance due to amount update"],
+                            application_id=app.application_id,
+                            customer_name=app.fullName,
+                            status="payment_required"
+                        )
+                    except Exception as e:
+                        print("Failed to send WhatsApp for remaining amount:", e)
+            extra_amount = data.get("extra_amount")
+            extra_payment_reason = data.get("extra_payment_reason")
+            
+            if extra_amount is not None:
+                new_extra = float(extra_amount)
+                if new_extra > 0 and app.extra_amount != new_extra:
+                    app.extra_amount = new_extra
+                    if extra_payment_reason is not None:
+                        app.extra_payment_reason = extra_payment_reason
+                    
+                    if app.extra_payment_status != "PAID":
+                        app.extra_payment_status = "PENDING"
+                        
+                    # Trigger WhatsApp notification for extra amount
+                    from .utils import send_interakt_template
+                    try:
+                        send_interakt_template(
+                            phone_number=app.phone,
+                            template_name="payment_update", # Ensure there's a template for this or a fallback
+                            variables=[app.fullName, str(new_extra), extra_payment_reason or "Additional charges"],
+                            application_id=app.application_id,
+                            customer_name=app.fullName,
+                            status="extra_payment_required"
+                        )
+                    except Exception as e:
+                        print("Failed to send WhatsApp for extra amount:", e)
+                elif new_extra == 0:
+                    app.extra_amount = 0
+                    app.extra_payment_status = "NONE"
+                    app.extra_payment_reason = ""
+            
             app.save()
 
             from .utils import send_interakt_template
@@ -2862,6 +2934,11 @@ def get_application_status(request):
             "service_fee": app.service_fee,
             "total_amount": app.total_amount,
             "paid_amount": app.paid_amount,
+            "total_amount_edit_reason": app.total_amount_edit_reason,
+            "extra_amount": app.extra_amount,
+            "extra_paid_amount": app.extra_paid_amount,
+            "extra_payment_status": app.extra_payment_status,
+            "extra_payment_reason": app.extra_payment_reason,
             "user_acknowledged": app.user_acknowledged,
             "documents": documents,
             "courier_partner": assignment.courier_partner if assignment else None,
@@ -3311,7 +3388,9 @@ class CreateCashfreeOrder(APIView):
             id=application_id
         )
 
-        payment_type = "FULL"
+        payment_type = request.data.get("payment_type", "FULL") if hasattr(request, 'data') else "FULL"
+        if not payment_type:
+            payment_type = request.GET.get("payment_type", "FULL")
 
         env = Cashfree.PRODUCTION if settings.CASHFREE_ENVIRONMENT == 'PRODUCTION' else Cashfree.SANDBOX
         Cashfree.XApiVersion = "2023-08-01"  # Required for v6 SDK
@@ -3340,34 +3419,43 @@ class CreateCashfreeOrder(APIView):
             customer_phone=phone
         )
 
-        if application.total_amount and float(application.total_amount) > 0:
-            total_order_amount = float(application.total_amount)
+        if payment_type == "EXTRA":
+            total_order_amount = float(application.extra_amount)
+            paid = float(application.extra_paid_amount)
+            remaining = total_order_amount - paid
+            if remaining <= 0:
+                return Response({"success": False, "error": "Extra payment is already fully paid."}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            total_order_amount = 1.00
-            if application.service_fee and application.service_fee > 0:
-                total_order_amount = float(application.service_fee)
+            if application.total_amount and float(application.total_amount) > 0:
+                total_order_amount = float(application.total_amount)
             else:
-                first_degree = application.degrees.first()
-                if first_degree and first_degree.university:
-                    from .models import Certificate
-                    try:
-                        cert = Certificate.objects.filter(
-                            college__name__icontains=first_degree.university,
-                            name__icontains=application.requirement
-                        ).first()
-                        if cert and cert.price > 0:
-                            total_order_amount = float(cert.price)
-                    except Exception as e:
-                        print(f"Failed to fetch dynamic price: {e}")
+                total_order_amount = 1.00
+                if application.service_fee and application.service_fee > 0:
+                    total_order_amount = float(application.service_fee)
+                else:
+                    first_degree = application.degrees.first()
+                    if first_degree and first_degree.university:
+                        from .models import Certificate
+                        try:
+                            cert = Certificate.objects.filter(
+                                college__name__icontains=first_degree.university,
+                                name__icontains=application.requirement
+                            ).first()
+                            if cert and cert.price > 0:
+                                total_order_amount = float(cert.price)
+                        except Exception as e:
+                            print(f"Failed to fetch dynamic price: {e}")
 
-            application.total_amount = total_order_amount
-            application.save()
+                application.total_amount = total_order_amount
+                application.save()
 
-        paid = float(application.paid_amount)
-        remaining = total_order_amount - paid
+            paid = float(application.paid_amount or 0)
+            remaining = total_order_amount - paid
+            
+            print(f"DEBUG: payment_type={payment_type}, total_order_amount={total_order_amount}, paid={paid}, remaining={remaining}")
 
-        if remaining <= 0:
-            return Response({"success": False, "error": "Application is already fully paid."}, status=status.HTTP_400_BAD_REQUEST)
+            if remaining <= 0:
+                return Response({"success": False, "error": f"Application is already fully paid. total={total_order_amount}, paid={paid}, remaining={remaining}"}, status=status.HTTP_400_BAD_REQUEST)
 
         order_amount = remaining
 
@@ -3465,16 +3553,29 @@ class VerifyPayment(APIView):
 
         if response.data.order_status == "PAID" and previous_status != "PAID":
             application = payment.application
-            application.paid_amount = float(application.paid_amount) + float(payment.amount)
-            remaining = float(application.total_amount) - float(application.paid_amount)
-
-            if remaining <= 0:
-                application.payment_status = "Fully Paid"
+            
+            if payment.payment_type == "EXTRA":
+                application.extra_paid_amount = float(application.extra_paid_amount) + float(payment.amount)
+                remaining = float(application.extra_amount) - float(application.extra_paid_amount)
+                
+                if remaining <= 0:
+                    application.extra_payment_status = "PAID"
+                else:
+                    application.extra_payment_status = "PARTIALLY_PAID"
+                    
+                application.save()
+                send_interakt_template(application.phone, "payment_status", [application.fullName, track_id, "Successful (Extra Payment)"])
             else:
-                application.payment_status = "Partially Paid"
+                application.paid_amount = float(application.paid_amount) + float(payment.amount)
+                remaining = float(application.total_amount) - float(application.paid_amount)
 
-            application.save()
-            send_interakt_template(application.phone, "payment_status", [application.fullName, track_id, "Successful"])
+                if remaining <= 0:
+                    application.payment_status = "Fully Paid"
+                else:
+                    application.payment_status = "Partially Paid"
+
+                application.save()
+                send_interakt_template(application.phone, "payment_status", [application.fullName, track_id, "Successful"])
         elif response.data.order_status == "FAILED" and previous_status != "FAILED":
             send_interakt_template(payment.application.phone, "payment_status", [payment.application.fullName, track_id, "Failed"])
         elif response.data.order_status in ["PENDING", "ACTIVE"] and previous_status not in ["PENDING", "ACTIVE"]:
@@ -3546,19 +3647,35 @@ def cashfree_webhook(request):
                 payment.save()
 
                 application = payment.application
-                application.paid_amount = float(application.paid_amount) + float(payment.amount)
-                remaining = float(application.total_amount) - float(application.paid_amount)
+                
+                if payment.payment_type == "EXTRA":
+                    application.extra_paid_amount = float(application.extra_paid_amount) + float(payment.amount)
+                    remaining = float(application.extra_amount) - float(application.extra_paid_amount)
 
-                if remaining <= 0:
-                    application.payment_status = "Fully Paid"
+                    if remaining <= 0:
+                        application.extra_payment_status = "PAID"
+                    else:
+                        application.extra_payment_status = "PARTIALLY_PAID"
+
+                    application.save()
+
+                    from .utils import send_interakt_template
+                    track_id = application.tracking_id or str(application.id)
+                    send_interakt_template(application.phone, "payment_status", [application.fullName, track_id, "Successful (Extra Payment)"])
                 else:
-                    application.payment_status = "Partially Paid"
+                    application.paid_amount = float(application.paid_amount) + float(payment.amount)
+                    remaining = float(application.total_amount) - float(application.paid_amount)
 
-                application.save()
+                    if remaining <= 0:
+                        application.payment_status = "Fully Paid"
+                    else:
+                        application.payment_status = "Partially Paid"
 
-                from .utils import send_interakt_template
-                track_id = application.tracking_id or str(application.id)
-                send_interakt_template(application.phone, "payment_status", [application.fullName, track_id, "Successful"])
+                    application.save()
+
+                    from .utils import send_interakt_template
+                    track_id = application.tracking_id or str(application.id)
+                    send_interakt_template(application.phone, "payment_status", [application.fullName, track_id, "Successful"])
 
         elif event == "PAYMENT_FAILED_WEBHOOK":
 

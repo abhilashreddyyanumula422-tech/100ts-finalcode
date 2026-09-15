@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+﻿import React, { useState, useEffect, useCallback } from "react";
 import {
   Search
 } from "lucide-react";
@@ -28,7 +28,7 @@ import { getVerifications } from "../../services/api";
 const CollegeVerification = () => {
   const [selectedVerification, setSelectedVerification] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  // 🟠 NEW: States for the Reply/Notification Generator
+  // ðŸŸ  NEW: States for the Reply/Notification Generator
   const [replyingTo, setReplyingTo] = useState(null);
   const [issueType, setIssueType] = useState("Document Issue");
   const [exactProblem, setExactProblem] = useState(
@@ -60,7 +60,7 @@ const CollegeVerification = () => {
     fetchVerifications();
   }, [fetchVerifications]);
 
-  // 🟠 NEW: Email logic
+  // ðŸŸ  NEW: Email logic
   const emailBody = replyingTo
     ? `Dear ${replyingTo.student},
 
@@ -104,7 +104,7 @@ ${companyName} Support Team`
   });
   return (
     <div className="space-y-8 relative">
-      {/* 🔵 Header */}
+      {/* ðŸ-µ Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
 
         {/* Left Side - Heading */}
@@ -144,7 +144,7 @@ ${companyName} Support Team`
       </div>
 
 
-      {/* 🟢 Top Cards */}
+      {/* ðŸŸ¢ Top Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border">
           <div className="flex items-center gap-4 mb-4">
@@ -165,7 +165,7 @@ ${companyName} Support Team`
         </div>
       </div>
 
-      {/* 📊 TABLE */}
+      {/* ðŸ“Š TABLE */}
       <div className="bg-white rounded-2xl border shadow-sm">
         {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto">
@@ -238,7 +238,7 @@ ${companyName} Support Team`
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
-                        {/* 🟠 Updated Reply Button */}
+                        {/* ðŸŸ  Updated Reply Button */}
                         <button
                           onClick={() => setReplyingTo(item)}
                           className="p-2 text-blue-600 hover:bg-orange-100 rounded-lg transition"
@@ -355,7 +355,7 @@ ${companyName} Support Team`
         </div>
       </div>
 
-      {/* 🟠 NEW: ISSUE NOTIFICATION MODAL */}
+      {/* ðŸŸ  NEW: ISSUE NOTIFICATION MODAL */}
       {replyingTo && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4 font-sans">
           <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
@@ -438,7 +438,7 @@ ${companyName} Support Team`
         </div>
       )}
 
-      {/* 🔵 VERIFICATION DETAIL MODAL */}
+      {/* ðŸ-µ VERIFICATION DETAIL MODAL */}
       {selectedVerification && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -536,7 +536,7 @@ ${companyName} Support Team`
 
               {/* Assignment Footer */}
               <div className="pt-4 flex flex-col sm:flex-row gap-3 border-t border-slate-100">
-                {/* 🟠 Updated Detail Modal Reply Button */}
+                {/* ðŸŸ  Updated Detail Modal Reply Button */}
                 <button
                   className="flex-1 bg-blue-50 text-blue-700 py-3 rounded-xl font-bold hover:bg-blue-100 transition flex items-center justify-center gap-2 min-h-[44px]"
                   onClick={() => {

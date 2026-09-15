@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { API_BASE } from '../../services/api';
 
 const DeliveryStaffManagement = () => {
@@ -25,7 +25,7 @@ const DeliveryStaffManagement = () => {
       });
       if (res.ok) {
         fetchStaff(); setForm({ name: '', employee_id: '', mobile: '', email: '', password: '', is_active: true }); setEditingId(null);
-      } else { alert('Error saving staff'); }
+      } else { console.log('Error saving staff'); }
     } catch (e) { console.error(e); }
   };
 

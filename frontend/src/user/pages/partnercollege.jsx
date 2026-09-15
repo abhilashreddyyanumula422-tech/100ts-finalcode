@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import collegesData from "../data/collegesData";
@@ -144,7 +144,7 @@ const PartnerCollege = () => {
           <p className="text-slate-600 mb-2">College not found</p>
           <p className="text-slate-500 text-sm mb-4">{error}</p>
           <Link to="/" className="text-blue-600 hover:text-blue-700">
-            ← Back to Home
+            â† Back to Home
           </Link>
         </div>
       </div>
@@ -153,7 +153,7 @@ const PartnerCollege = () => {
 
   return (
     <div className="bg-white text-slate-900">
-      {/* ══ HERO ══ */}
+      {/* â•â• HERO â•â• */}
       <section className="relative overflow-hidden bg-white pt-20 pb-8 md:pt-28 md:pb-12 min-h-[90vh] flex items-center">
         <div className="absolute inset-0 bg-right bg-no-repeat opacity-100 hidden md:block" style={{ backgroundImage: `url(${college?.heroImage && college.heroImage !== 'partnerclg.png' ? college.heroImage : partnerclge})`, backgroundSize: "cover" }} />
         {/* Mobile background */}
@@ -219,13 +219,13 @@ const PartnerCollege = () => {
         </div>
       </section>
 
-      {/* ══ SERVICES ══ */}
+      {/* â•â• SERVICES â•â• */}
       <CollegeServices
         services={services}
         description={`Exclusive services for ${collegeName} students for credential evaluations, university submissions, and official verification needs.`}
       />
 
-      {/* ══ GET STARTED ══ */}
+      {/* â•â• GET STARTED â•â• */}
       <section id="submit-documents" className="bg-white pt-4 pb-12 md:pb-16">
         <div className="mx-auto max-w-3xl px-6 md:px-12">
           <motion.div initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>

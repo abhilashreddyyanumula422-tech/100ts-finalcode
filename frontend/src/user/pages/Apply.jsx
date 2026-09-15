@@ -1,6 +1,18 @@
+
+
+
+
+
+
+
+
+
+
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import ReCAPTCHA from "react-google-recaptcha";
 import digilockerLogo from "../../assets/digilocker_logo.png";
 import { API_BASE_URL as API_BASE } from "../../services/api";
 import { validateName, validateEmail, validatePhone, restrictNameInput, restrictPhoneInput } from "../../utils/validation";
@@ -1083,7 +1095,7 @@ async function compressImage(file, _maxSizeMB = 1, maxDimension = 1920) {
   return new Promise((resolve) => {
     // Bypass compression and return original file
     resolve({ file, compressed: false });
-    
+
     /* ORIGINAL COMPRESSION LOGIC (COMMENTED OUT)
     if (!file.type.startsWith("image/")) {
       resolve({ file, compressed: false });
@@ -1370,11 +1382,20 @@ const UpBlock = ({ type, label, options, upProg, upNames, upCompressed, onFile, 
 /* ─────────────────────────────────────────
    STEP COMPONENTS
 ───────────────────────────────────────── */
-const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, upNames, upCompressed, onFile, delFile, onDigiLocker, onSubmit, adminMessage, isEditingCorrection, activeIssue, existingDocs }) => {
+const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, upNames, upCompressed, onFile, delFile, onDigiLocker, onSubmit, adminMessage, isEditingCorrection, activeIssue, existingDocs, captchaValue, setCaptchaValue }) => {
   const [showManualUpload, setShowManualUpload] = React.useState(false);
 
+  const handleLocalSubmit = (e) => {
+    e.preventDefault();
+    if (!captchaValue) {
+      alert("Please verify that you are not a robot.");
+      return;
+    }
+    onSubmit(e);
+  };
+
   return (
-    <form onSubmit={onSubmit}>
+    <form onSubmit={handleLocalSubmit}>
       {isEditingCorrection && activeIssue && (
         <div className="info-panel red" style={{ marginBottom: 24, border: "2px solid #ef4444", backgroundColor: "#fef2f2" }}>
           <span className="info-icon">🔴</span>
@@ -1432,18 +1453,122 @@ const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, 
           </div>
         ))}
         <div className="field">
-          <label>Select Requirement <span className="req">*</span></label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <svg stroke="#64748b" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="16" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><line x1="8" y1="10" x2="16" y2="10"></line><line x1="8" y1="14" x2="16" y2="14"></line></svg>
+            Select your Requirements <span className="req">*</span>
+          </label>
           <select name="requirement" value={form.requirement} onChange={onChange}>
             <option value="">— Choose Service —</option>
-            <option value="Transcripts">Transcripts</option>
-            <option value="WES">WES</option>
-            <option value="Genuineness">Genuineness</option>
+            <option value="ECE Evaluation">ECE Evaluation</option>
+            <option value="IEE Evaluation">IEE Evaluation</option>
+            <option value="SpanTran: The Evaluation Company (TEC)">SpanTran: The Evaluation Company (TEC)</option>
+            <option value="Medium Of Instruction (MOI)-UK NARIC ECCTIS">Medium Of Instruction (MOI)-UK NARIC ECCTIS</option>
+            <option value="WES (World Education Services)">WES (World Education Services)</option>
+            <option value="Others">Others</option>
           </select>
         </div>
-        <div className="field">
-          <label>Reference Number</label>
-          <input type="text" name="referenceNumber" value={form.referenceNumber} onChange={onChange} placeholder="If you have one" />
-        </div>
+        {form.requirement === 'Others' ? (
+          <React.Fragment>
+            <div className="field" style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '18px', color: '#64748b', fontWeight: 'normal' }}>#</span>
+                Enter your detailed requirements <span className="req">*</span>
+              </label>
+              <textarea 
+                name="detailedRequirements" 
+                value={form.detailedRequirements || ''} 
+                onChange={onChange} 
+                placeholder="Enter your requirements or additional information" 
+                required
+                rows="3"
+                style={{
+                  padding: '14px 16px',
+                  border: '1.5px solid #e2e8f0',
+                  borderRadius: '16px',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  color: '#1e293b',
+                  background: '#ffffff',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+            <div className="field" style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg stroke="#64748b" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="16" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                Address to Deliver<span className="req">*</span>
+              </label>
+              <textarea 
+                name="deliveryAddress" 
+                value={form.deliveryAddress || ''} 
+                onChange={onChange} 
+                placeholder="Enter your complete address" 
+                required
+                rows="3"
+                style={{
+                  padding: '14px 16px',
+                  border: '1.5px solid #e2e8f0',
+                  borderRadius: '16px',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  color: '#1e293b',
+                  background: '#ffffff',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+          </React.Fragment>
+        ) : (
+          <div className="field">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <svg stroke="#64748b" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="16" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              {form.requirement === 'SpanTran: The Evaluation Company (TEC)' ? 'SpanTran: (TEC) Reference Number' :
+                form.requirement === 'ECE Evaluation' ? 'ECE Reference Number' :
+                  form.requirement === 'IEE Evaluation' ? 'IEE Order Number' :
+                    form.requirement === 'WES (World Education Services)' ? 'WES Reference Number' :
+                      form.requirement === 'Medium Of Instruction (MOI)-UK NARIC ECCTIS' ? 'Enter address to deliver' :
+                        'Reference Number'} <span className="req">*</span>
+            </label>
+  
+            {form.requirement === 'Medium Of Instruction (MOI)-UK NARIC ECCTIS' ? (
+              <textarea
+                name="deliveryAddress"
+                value={form.deliveryAddress || ''}
+                onChange={onChange}
+                placeholder="Enter your complete address"
+                required
+                rows="3"
+                style={{
+                  padding: '14px 16px',
+                  border: '1.5px solid #e2e8f0',
+                  borderRadius: '16px',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  color: '#1e293b',
+                  background: '#ffffff',
+                  resize: 'vertical'
+                }}
+              />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <input
+                  type="text"
+                  name="referenceNumber"
+                  value={form.referenceNumber}
+                  onChange={onChange}
+                  placeholder="Reference number"
+                  required
+                />
+                <div style={{ textAlign: 'right', marginTop: '8px' }}>
+  
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="sec-title">Academic Information <span className="req">*</span></div>
@@ -1575,8 +1700,14 @@ const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, 
           <span>I confirm that I am not physically challenged / pregnant or under similar special conditions</span>
         </label>
       </div>
+      <div className="flex justify-center my-6">
+        <ReCAPTCHA
+          sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+          onChange={(val) => setCaptchaValue(val)}
+        />
+      </div>
       <div className="actions">
-        <button type="submit" className="btn-primary">
+        <button type="submit" className="btn-primary" disabled={!captchaValue}>
           {isEditingCorrection ? "Submit Correction ✓" : "Proceed to Payment →"}
         </button>
 
@@ -1585,65 +1716,96 @@ const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, 
   );
 };
 
-const Step1 = ({ form: _form, goStep, handlePayment, serviceFee, totalAmount, paidAmount }) => {
+const Step1 = ({ form: _form, goStep, handlePayment, serviceFee, totalAmount, paidAmount, isPayingExtra, extraAmount, extraPaidAmount, extraPaymentReason }) => {
   const [loading, setLoading] = React.useState(false);
-  const remainingAmount = totalAmount - paidAmount;
-  
+  const remainingAmount = isPayingExtra
+    ? (extraAmount || 0) - (extraPaidAmount || 0)
+    : totalAmount - paidAmount;
+
   const amountToPay = remainingAmount;
-  
+
   const onPay = async () => {
     setLoading(true);
-    await handlePayment();
+    await handlePayment(isPayingExtra ? "EXTRA" : "FULL");
     setLoading(false);
   };
-  
+
   return (
     <div>
       <div className="step-header">
         <div className="step-icon icon-amber">💳</div>
         <div>
-          <div className="step-title">Secure Payment</div>
+          <div className="step-title">{isPayingExtra ? "Additional Payment Required" : "Secure Payment"}</div>
           <div className="step-subtitle">Complete your payment to begin document processing</div>
         </div>
       </div>
       <div className="info-panel amber">
         <span className="info-icon">🔒</span>
         <h3>Payment Summary</h3>
-        <div className="flex justify-between mt-2">
-          <span>Total Amount:</span>
-          <strong>₹ {totalAmount}</strong>
-        </div>
-        {paidAmount > 0 && (
+
+        {isPayingExtra ? (
           <>
-            <div className="flex justify-between mt-1 text-green-600">
-              <span>Already Paid:</span>
-              <strong>₹ {paidAmount}</strong>
+            <div className="flex justify-between mt-2">
+              <span>Extra Amount:</span>
+              <strong>₹ {extraAmount || 0}</strong>
             </div>
-            <div className="flex justify-between mt-1 text-amber-600">
-              <span>Remaining Balance:</span>
-              <strong>₹ {remainingAmount}</strong>
-            </div>
-            
-            <div className="mt-4 mb-2">
-              <div className="flex justify-between text-xs mb-1">
-                <span>Payment Progress</span>
-                <span>{Math.round((paidAmount / totalAmount) * 100)}%</span>
+            {extraPaymentReason && (
+              <div className="text-sm mt-1 text-gray-600 italic">
+                Reason: {extraPaymentReason}
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-green-500 h-2 rounded-full" style={{ width: `${(paidAmount / totalAmount) * 100}%` }}></div>
-              </div>
+            )}
+            {extraPaidAmount > 0 && (
+              <>
+                <div className="flex justify-between mt-2 text-green-600">
+                  <span>Already Paid:</span>
+                  <strong>₹ {extraPaidAmount}</strong>
+                </div>
+                <div className="flex justify-between mt-1 text-amber-600">
+                  <span>Remaining Balance:</span>
+                  <strong>₹ {remainingAmount}</strong>
+                </div>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="flex justify-between mt-2">
+              <span>Total Amount:</span>
+              <strong>₹ {totalAmount}</strong>
             </div>
+            {paidAmount > 0 && (
+              <>
+                <div className="flex justify-between mt-1 text-green-600">
+                  <span>Already Paid:</span>
+                  <strong>₹ {paidAmount}</strong>
+                </div>
+                <div className="flex justify-between mt-1 text-amber-600">
+                  <span>Remaining Balance:</span>
+                  <strong>₹ {remainingAmount}</strong>
+                </div>
+
+                <div className="mt-4 mb-2">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span>Payment Progress</span>
+                    <span>{Math.round((paidAmount / totalAmount) * 100)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="bg-green-500 h-2 rounded-full" style={{ width: `${(paidAmount / totalAmount) * 100}%` }}></div>
+                  </div>
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
-      
+
       {paidAmount > 0 && remainingAmount > 0 && (
         <div className="mt-6 mb-4">
           <h4 className="font-semibold text-gray-700 mb-2">Pay Remaining Balance</h4>
           <p className="text-sm text-gray-600 mb-4">You have a remaining balance of ₹{remainingAmount}. Please pay the remaining balance to proceed.</p>
         </div>
       )}
-      
+
       <div className="actions mt-6">
         {paidAmount === 0 && <button className="btn-secondary" onClick={() => goStep(0)}>← Back</button>}
         <button className="btn-primary sky" onClick={onPay} disabled={loading}>
@@ -1676,10 +1838,10 @@ const Step2 = ({ appStatus, adminMessage, rejectionReason, goStep, onRetry }) =>
             {isRejected
               ? "Your application was rejected by the admin"
               : isApproved
-              ? "Your documents have been approved! Please proceed to payment"
-              : isChangesRequested
-              ? "The admin has requested some changes to your application"
-              : "Your application has been submitted and is pending admin review"}
+                ? "Your documents have been approved! Please proceed to payment"
+                : isChangesRequested
+                  ? "The admin has requested some changes to your application"
+                  : "Your application has been submitted and is pending admin review"}
           </div>
         </div>
       </div>
@@ -1827,101 +1989,59 @@ const Step4 = ({ form, reset }) => (
 
 const NumberedRoadmap = ({ activeStep = 0 }) => {
   const steps = [
-    { num: 1, label: "Upload Documents", color: "from-blue-500 to-cyan-400", shadow: "shadow-blue-500/40" },
-    { num: 2, label: "Verification", color: "from-indigo-500 to-purple-400", shadow: "shadow-indigo-500/40" },
-    { num: 3, label: "Payment", color: "from-pink-500 to-rose-400", shadow: "shadow-pink-500/40" },
-    { num: 4, label: "University Verification", color: "from-purple-500 to-pink-500", shadow: "shadow-purple-500/40" },
-    { num: 5, label: "Final Submission", color: "from-emerald-500 to-teal-400", shadow: "shadow-emerald-500/40" }
+    { num: 1, label: "Upload Documents", hint: "Submitting digital paperwork", icon: "📤", color: "#3b82f6", bg: "#eff6ff" },
+    { num: 2, label: "Admin Verification", hint: "Team checks for authenticity", icon: "🔍", color: "#22c55e", bg: "#f0fdf4" },
+    { num: 3, label: "Secure Payment", hint: "Processing application fees", icon: "💳", color: "#e11d48", bg: "#fff1f2" },
+    { num: 4, label: "University Verification", hint: "University checks records", icon: "🎓", color: "#a855f7", bg: "#faf5ff" },
+    { num: 5, label: "Delivery Successful", hint: "Documents delivered safely", icon: "🚚", color: "#64748b", bg: "#f8fafc" }
   ];
 
   return (
-    <div className="w-full max-w-4xl mx-auto mb-10 px-4 sm:px-6 mt-4">
-      <div className="relative flex justify-between items-start">
-
-        {steps.map((step, index) => {
-          const isCompleted = index < activeStep;
-          const isActive = index === activeStep;
-          const isUpcoming = index > activeStep;
-
+    <div className="hp-container">
+      <div className="hp-track-bg">
+        <div className="hp-track-fill" style={{ width: `${(activeStep / (steps.length - 1)) * 100}%` }} />
+      </div>
+      <div className="hp-steps">
+        {steps.map((step, i) => {
+          const isDone = i < activeStep;
+          const isActive = i === activeStep;
           return (
-            <React.Fragment key={index}>
-              <div className="relative z-10 flex flex-col items-center w-[60px] sm:w-[100px]">
-
-                {/* Circle */}
-                <motion.div
-                  initial={false}
-                  animate={{
-                    scale: isActive ? 1.15 : 1,
-                    backgroundColor: isCompleted || isActive ? "#fff" : "#f8fafc",
-                    borderColor: isCompleted || isActive ? "transparent" : "#e2e8f0"
+            <div key={i} className={`hp-step ${isDone ? "done" : ""} ${isActive ? "active" : ""}`}>
+              <div
+                className="hp-circle"
+                style={{
+                  borderColor: isActive || isDone ? step.color : "#e2e8f0",
+                  background: isActive ? step.bg : isDone ? "#f0f9ff" : "#ffffff",
+                  boxShadow: isActive ? `0 0 15px ${step.color}44` : "none",
+                  filter: !isActive && !isDone ? "grayscale(1) opacity(0.4)" : "none",
+                  position: "relative"
+                }}
+              >
+                <div
+                  className="absolute -top-2 -right-2 w-5 h-5 rounded-full text-[11px] font-extrabold text-white flex items-center justify-center border-2 border-white shadow-sm transition-all duration-300"
+                  style={{
+                    background: isDone ? "#0ea5e9" : isActive ? step.color : "#94a3b8"
                   }}
-                  transition={{ duration: 0.4 }}
-                  className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 text-xs sm:text-sm font-bold transition-all relative
-                    ${isActive ? `bg-gradient-to-br ${step.color} shadow-lg ${step.shadow} text-white border-transparent` : ""}
-                    ${isCompleted ? "bg-slate-800 text-white border-slate-800" : ""}
-                    ${isUpcoming ? "text-slate-400 border-slate-200 bg-white" : ""}
-                  `}
                 >
-                  {/* Gradient background for active state to override border */}
-                  {isActive && (
-                    <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${step.color}`} />
-                  )}
-                  {isCompleted && (
-                    <div className="absolute inset-0 rounded-full bg-slate-800" />
-                  )}
-
-                  {/* Number or Checkmark */}
-                  <span className="relative z-10 flex items-center justify-center">
-                    {isCompleted ? (
-                      <motion.svg
-                        initial={{ scale: 0 }} animate={{ scale: 1 }}
-                        className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </motion.svg>
-                    ) : (
-                      <span className={isActive ? "text-white" : "text-slate-500"}>{step.num}</span>
-                    )}
-                  </span>
-
-                  {/* Glow ring for active */}
-                  {isActive && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: [0.4, 0.1, 0.4], scale: [1.2, 1.4, 1.2] }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                      className={`absolute inset-0 rounded-full bg-gradient-to-br ${step.color} -z-10`}
-                    />
-                  )}
-                </motion.div>
-
-                {/* Label */}
-                <div className="mt-2 text-center">
-                  <div className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-wider mb-0.5 transition-colors duration-300
-                    ${isActive ? "text-blue-600" : isCompleted ? "text-slate-500" : "text-slate-400"}
-                  `}>
-                    Step {step.num}
-                  </div>
-                  <div className={`text-[9px] sm:text-[10px] font-bold transition-colors duration-300 w-full leading-tight
-                    ${isActive ? "text-slate-900" : isCompleted ? "text-slate-700" : "text-slate-400"}
-                  `}>
-                    {step.label}
-                  </div>
+                  {isDone ? "✓" : step.num}
+                </div>
+                {step.icon}
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div className="hp-label" style={{
+                  color: isDone ? "#15803d" : isActive ? step.color : "#64748b",
+                  transition: "all 0.3s ease",
+                  fontWeight: "800",
+                  fontSize: "14px",
+                  whiteSpace: "nowrap"
+                }}>
+                  {step.label}
+                </div>
+                <div style={{ fontSize: "10px", color: isDone ? "#22c55e" : isActive ? step.color : "#64748b", marginTop: "2px", fontWeight: "600", opacity: 1, whiteSpace: "nowrap" }}>
+                  {step.hint}
                 </div>
               </div>
-
-              {/* Connecting Arrow */}
-              {index < steps.length - 1 && (
-                <div className="flex-1 flex items-center justify-center mt-3 sm:mt-4 px-1">
-                  <div className="w-full relative flex items-center">
-                    <div className={`w-full h-[1px] sm:h-[2px] transition-colors duration-500 ${index < activeStep ? "bg-blue-500" : "bg-slate-200"}`} />
-                    <svg className={`absolute right-0 -mr-1 w-3 h-3 transition-colors duration-500 ${index < activeStep ? "text-blue-500" : "text-slate-200"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </div>
-              )}
-            </React.Fragment>
+            </div>
           );
         })}
       </div>
@@ -2021,14 +2141,15 @@ export default function Apply() {
   const [paidAmount, setPaidAmount] = useState(0);
   const [paymentStatus, setPaymentStatus] = useState("Pending");
   const [errors, setErrors] = useState({});
-  
+
   const [activeIssue, setActiveIssue] = useState(null);
   const [isEditingCorrection, setIsEditingCorrection] = useState(false);
   const [rawAppData, setRawAppData] = useState(null);
-  
+
   const [userMsg, setUserMsg] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [captchaValue, setCaptchaValue] = useState(null);
 
   const [form, setForm] = useState(() => {
     const user = JSON.parse(localStorage.getItem("user"));
@@ -2053,6 +2174,13 @@ export default function Apply() {
 
   const [digiModal, setDigiModal] = useState({ open: false, type: null, label: "" });
   const hasAppliedUniversityRef = useRef(false);
+  const [isPayingExtra, setIsPayingExtra] = useState(false);
+
+  const goStep = useCallback((n) => {
+    setActiveStep(n);
+    setAnimKey(k => k + 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   // ✅ Handle University Autofill from Search
   useEffect(() => {
@@ -2086,6 +2214,29 @@ export default function Apply() {
     }
   }, [location.state, isEditingCorrection]);
 
+  // ✅ Handle incoming Extra/Balance Payment requests from FileStatus
+  useEffect(() => {
+    if ((location.state?.payExtra || location.state?.payBalance) && location.state?.appData) {
+      const data = location.state.appData;
+      setApplicationId(data.application_id || data.id);
+      setAppStatus(data.status || "pending_approval");
+      setRawAppData(data);
+      if (data.service_fee) setServiceFee(data.service_fee);
+      if (data.total_amount) setTotalAmount(data.total_amount);
+      if (data.paid_amount) setPaidAmount(data.paid_amount);
+
+      if (location.state?.payExtra && !isPayingExtra) {
+        setIsPayingExtra(true);
+        goStep(2);
+      } else if (location.state?.payBalance && isPayingExtra) {
+        setIsPayingExtra(false);
+        goStep(2);
+      } else if (location.state?.payBalance && !isPayingExtra && activeStep !== 2) {
+        goStep(2);
+      }
+    }
+  }, [location.state, isPayingExtra, goStep, activeStep]);
+
   useEffect(() => {
     if (!document.getElementById("apply-css")) {
       const s = document.createElement("style");
@@ -2093,12 +2244,6 @@ export default function Apply() {
       s.textContent = GLOBAL_CSS;
       document.head.appendChild(s);
     }
-  }, []);
-
-  const goStep = useCallback((n) => {
-    setActiveStep(n);
-    setAnimKey(k => k + 1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
   const handleEditCorrection = (appData) => {
@@ -2122,7 +2267,7 @@ export default function Apply() {
         college: d.college || ""
       })));
     }
-    
+
     // Map existing documents
     if (appData.documents && appData.documents.length > 0) {
       const docs = {};
@@ -2140,7 +2285,7 @@ export default function Apply() {
 
   const handleUserSubmitIssueResponse = async (e) => {
     e.preventDefault();
-    
+
     const missingDocs = activeIssue?.required_documents?.filter(doc => !uploadedFiles[doc]);
     if (missingDocs && missingDocs.length > 0) {
       alert(`Please upload files for: ${missingDocs.join(", ")}`);
@@ -2161,10 +2306,9 @@ export default function Apply() {
       });
 
       if (res.ok) {
-        alert("Correction submitted successfully!");
         setUserMsg("");
         setUploadedFiles({});
-        
+
         const statusRes = await fetch(`${API_BASE}/api/application/${applicationId}/status/`);
         const statusData = await statusRes.json();
         if (statusData.status) {
@@ -2173,7 +2317,7 @@ export default function Apply() {
           setRejectionReason(statusData.rejection_reason || "");
           setActiveIssue(statusData.active_issue || null);
           setRawAppData(statusData);
-          
+
           if (statusData.status === "approved") {
             if (statusData.payment_status === "Paid" || statusData.payment_status === "Fully Paid") goStep(3);
             else goStep(2);
@@ -2183,6 +2327,7 @@ export default function Apply() {
             goStep(1);
           }
         }
+        setCaptchaValue(null);
       } else {
         const err = await res.json();
         alert(err.error || "Failed to submit correction.");
@@ -2287,7 +2432,7 @@ export default function Apply() {
             if (data.payment_status) setPaymentStatus(data.payment_status);
             setRawAppData(data);
             setActiveIssue(data.active_issue || null);
-            
+
             // Re-route dynamically on status updates ONLY if the active issue status changes or is not open/user_responded
             if (!data.active_issue || data.active_issue.status === 'RESOLVED') {
               if (data.status === "approved") {
@@ -2318,12 +2463,12 @@ export default function Apply() {
     const { name, value, type, checked } = e.target;
     const finalValue = type === "checkbox" ? checked : value;
     setForm(f => ({ ...f, [name]: finalValue }));
-    
+
     let errorMsg = "";
     if (name === "fullName") errorMsg = validateName(finalValue);
     else if (name === "email") errorMsg = validateEmail(finalValue);
     else if (name === "phone" || name === "altPhone") errorMsg = validatePhone(finalValue);
-    
+
     setErrors(prev => ({ ...prev, [name]: errorMsg }));
   }, []);
 
@@ -2396,7 +2541,6 @@ export default function Apply() {
   const handleTrack = (e) => {
     e.preventDefault();
     if (!trackId.trim()) { alert("Please enter a tracking ID"); return; }
-    alert(`Searching for Application ID: ${trackId}\n\n[Demo Mode]: Current status is "Processing at University"`);
   };
 
   const onSubmit = async (e) => {
@@ -2443,6 +2587,7 @@ export default function Apply() {
         const fileData = upCompressed[type];
         if (fileData?.file) formData.append(type, fileData.file);
       });
+      formData.append("captcha_token", captchaValue || "");
 
       if (isEditingCorrection) {
         let currentAppId = applicationId;
@@ -2486,9 +2631,9 @@ export default function Apply() {
           if (data.token && data.user) {
             localStorage.setItem("user", JSON.stringify({ ...data.user, token: data.token }));
           }
-          alert("Correction submitted successfully.");
           setIsEditingCorrection(false);
-          
+          setCaptchaValue(null);
+
           const statusRes = await fetch(`${API_BASE}/api/application/${applicationId}/status/`);
           const statusData = await statusRes.json();
           if (statusData.status) {
@@ -2497,7 +2642,7 @@ export default function Apply() {
             setRejectionReason(statusData.rejection_reason || "");
             setActiveIssue(statusData.active_issue || null);
             setRawAppData(statusData);
-            
+
             if (statusData.status === "approved") {
               if (statusData.payment_status === "Paid" || statusData.payment_status === "Fully Paid") goStep(3);
               else goStep(2);
@@ -2540,13 +2685,12 @@ export default function Apply() {
 
       if (res.ok) {
         if (data.token && data.user) {
-          localStorage.setItem("user", JSON.stringify({ 
+          localStorage.setItem("user", JSON.stringify({
             type: "user",
             token: data.token,
-            data: data.user 
+            data: data.user
           }));
         }
-        alert("Your application has been submitted successfully and is waiting for admin approval.");
         setApplicationId(data.application_id);
         setAppStatus("pending_approval");
         setAdminMessage("");
@@ -2554,6 +2698,7 @@ export default function Apply() {
         localStorage.setItem("applicationId", data.application_id);
         localStorage.setItem("flowType", flowType); // Persist flowType locally
         localStorage.removeItem("isNewRequest");
+        setCaptchaValue(null);
         goStep(1);
       } else {
         alert(data.error || "Submission failed");
@@ -2582,7 +2727,6 @@ export default function Apply() {
       const data = await res.json();
 
       if (res.ok) {
-        alert(`Refund Successful ✅\nRefund ID: ${data.refund_id}`);
       } else {
         alert(data.error || "Refund Failed ❌");
       }
@@ -2593,19 +2737,28 @@ export default function Apply() {
     }
   };
 
-  const handlePayment = async () => {
+  const handlePayment = async (paymentType = "FULL") => {
     try {
       const res = await fetch(`${API_BASE}/api/create-order/${applicationId}/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ payment_type: paymentType }),
       });
 
       if (!res.ok) {
         const errData = await res.json();
-        alert(errData.error || "Failed to create order");
+        const errorMsg = errData.error || "Failed to create order";
+        if (errorMsg.includes("already fully paid")) {
+          if (paymentType === "EXTRA" || location.state?.payBalance) {
+            navigate("/file-status", { state: { trackingId: applicationId } });
+          } else {
+            goStep(3);
+          }
+          return;
+        }
+        alert(errorMsg);
         return;
       }
 
@@ -2625,15 +2778,18 @@ export default function Apply() {
           alert("Payment Failed: " + result.error.message);
           return;
         }
-        
+
         if (result.paymentDetails || result.redirect === false) {
           try {
             const verifyRes = await fetch(`${API_BASE}/api/verify-payment/${data.order_id}/`);
             const verifyData = await verifyRes.json();
 
             if (verifyRes.ok && verifyData.status === "PAID") {
-              alert("Payment Successful ✅");
-              goStep(3);
+              if (paymentType === "EXTRA" || location.state?.payBalance) {
+                navigate("/file-status", { state: { trackingId: applicationId } });
+              } else {
+                goStep(3);
+              }
             } else {
               alert("Payment Failed ❌");
             }
@@ -2683,11 +2839,11 @@ export default function Apply() {
             <div className="hero-header" style={{ marginBottom: '20px' }}>
               <h1 style={{ fontSize: '28px' }}>Track Your <em>Application</em></h1>
             </div>
-            <form 
-              className="track-bar" 
+            <form
+              className="track-bar"
               onSubmit={(e) => {
                 e.preventDefault();
-                if(trackInputId.trim()) navigate("/file-status", { state: { trackingId: trackInputId } });
+                if (trackInputId.trim()) navigate("/file-status", { state: { trackingId: trackInputId } });
               }}
             >
               <input
@@ -2703,8 +2859,6 @@ export default function Apply() {
               </button>
             </form>
           </div>
-
-          <HorizontalRoadmap activeStep={activeStep} />
           <NumberedRoadmap activeStep={activeStep} />
 
           {activeIssue && (
@@ -2814,7 +2968,7 @@ export default function Apply() {
                   <p style={{ fontSize: '14px', color: '#78350f', fontWeight: 600, marginBottom: '16px' }}>
                     Your correction has been submitted and is waiting for agent review.
                   </p>
-                  
+
                   {rawAppData?.agent_details && (
                     <div style={{
                       display: 'flex',
@@ -2825,7 +2979,7 @@ export default function Apply() {
                       paddingTop: '16px'
                     }}>
                       <span style={{ fontSize: '13px', fontWeight: 700, color: '#78350f' }}>Direct Support:</span>
-                      
+
                       <a
                         href={`https://wa.me/${rawAppData.agent_details.mobile.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${rawAppData.agent_details.name}, regarding my application (ID: ${applicationId || rawAppData.application_id}), I have updated the requested details.`)}`}
                         target="_blank"
@@ -2890,6 +3044,8 @@ export default function Apply() {
                     isEditingCorrection={isEditingCorrection}
                     activeIssue={activeIssue}
                     existingDocs={existingDocs}
+                    captchaValue={captchaValue}
+                    setCaptchaValue={setCaptchaValue}
                   />
                 )}
                 {activeStep === 1 && (
@@ -2916,6 +3072,10 @@ export default function Apply() {
                     serviceFee={serviceFee}
                     totalAmount={totalAmount}
                     paidAmount={paidAmount}
+                    isPayingExtra={isPayingExtra}
+                    extraAmount={rawAppData?.extra_amount || 0}
+                    extraPaidAmount={rawAppData?.extra_paid_amount || 0}
+                    extraPaymentReason={rawAppData?.extra_payment_reason || ""}
                   />
                 )}
                 {activeStep === 3 && <Step3 reset={reset} handleRefund={handleRefund} />}
@@ -2927,7 +3087,7 @@ export default function Apply() {
           <AnimatePresence>
             {showAckModal && (
               <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, scale: 0.95, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -2943,7 +3103,7 @@ export default function Apply() {
                   <p className="text-[14px] text-slate-500 mb-6 leading-relaxed">
                     Your verified documents have been successfully delivered. Please confirm you've received everything in order to complete this assignment.
                   </p>
-                  <button 
+                  <button
                     onClick={handleAcknowledge}
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-emerald-200"
                   >

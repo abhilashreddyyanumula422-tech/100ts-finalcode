@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { useParams } from "react-router-dom";
 import { useAgentSession, useAssignment } from "../hooks";
 import { useAgentData } from "../context/AgentDataContext";
@@ -15,7 +15,7 @@ export default function AgentRequestDetail() {
   const { reload: reloadDashboard } = useAgentData();
   const { assignment, loading, error, toast, notify, reload } = useAssignment(agentId, id);
 
-  if (loading) return <PageLoading label="Loading request…" />;
+  if (loading) return <PageLoading label="Loading request..." />;
   if (error && !assignment) return <PageError message={error} />;
   if (!assignment) return null;
 

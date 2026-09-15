@@ -359,7 +359,7 @@ const IEEevaluation = () => {
                     transition={{ duration: 3, repeat: Infinity }}
                     className="absolute -top-6 -right-6 bg-gradient-to-r from-blue-600 to-blue-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-xl"
                   >
-                    <span className="text-2xl">📋</span>
+                    <span className="text-2xl">ðŸ“‹</span>
                   </motion.div> */}
                 </div>
               </motion.div>
@@ -374,7 +374,7 @@ const IEEevaluation = () => {
                 {[
                   { icon: "⚡", label: "Fast", color: "yellow" },
                   { icon: "🔒", label: "Secure", color: "green" },
-                  { icon: "🌍", label: "Global", color: "blue" },
+                  { icon: "🌐", label: "Global", color: "blue" },
                   { icon: "✅", label: "Verified", color: "blue" }
                 ].map((feature, index) => (
                   <motion.div

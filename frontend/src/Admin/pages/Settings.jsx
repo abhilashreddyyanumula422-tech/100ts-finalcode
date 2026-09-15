@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Upload, Save } from "lucide-react";
 
 const Settings = () => {
   const [image, setImage] = useState(null);
 
-  // 📸 Handle Upload
+  // ðŸ“¸ Handle Upload
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -17,7 +17,7 @@ const Settings = () => {
 
       <div className="max-w-4xl mx-auto space-y-6">
 
-        {/* 🔵 HEADER */}
+        {/* ðŸ-µ HEADER */}
         <div className="bg-[#0b2a4a] text-white p-5 rounded-xl shadow flex justify-between items-center">
           <div>
             <h1 className="text-xl font-semibold">Admin Profile</h1>
@@ -25,10 +25,10 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* 🧾 CARD */}
+        {/* ðŸ§¾ CARD */}
         <div className="bg-white rounded-xl shadow p-6 space-y-6">
 
-          {/* 📸 PHOTO UPLOAD */}
+          {/* ðŸ“¸ PHOTO UPLOAD */}
           <div className="flex items-center gap-6">
 
             {/* Image Preview */}

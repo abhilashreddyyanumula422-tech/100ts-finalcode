@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Link } from "react-router-dom";
 import { Package, Truck, ExternalLink } from "lucide-react";
 import { Section, EmptyState, StatusPill, ActionButton } from "../ui";
@@ -8,8 +8,8 @@ function DeliveryRow({ item: d }) {
     <article className="p-5 space-y-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-[13px]">
-          <span className="font-semibold text-slate-900 tabular-nums">{d.application_display_id || "—"}</span>
-          <span className="mx-2 text-slate-300">·</span>
+          <span className="font-semibold text-slate-900 tabular-nums">{d.application_display_id || "-"}</span>
+          <span className="mx-2 text-slate-300">Â·</span>
           <span className="text-slate-600">{d.student}</span>
         </p>
         <StatusPill status={d.status} label={d.status_label} />
@@ -33,7 +33,7 @@ function DeliveryRow({ item: d }) {
         </div>
         <div className="flex gap-1.5 min-w-0">
           <dt className="text-slate-400">Tracking</dt>
-          <dd className="font-mono font-medium text-slate-700 truncate">{d.tracking_id || "—"}</dd>
+          <dd className="font-mono font-medium text-slate-700 truncate">{d.tracking_id || "-"}</dd>
         </div>
       </dl>
 

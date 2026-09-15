@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../../assets/100.png";
 import {
@@ -532,7 +532,7 @@ const Navbar = () => {
                           <span>Upload Photos</span>
                           <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                             if(e.target.files && e.target.files[0]) {
-                              alert("Photo selected: " + e.target.files[0].name + ". Upload functionality to be implemented.");
+                              console.log("Photo selected: " + e.target.files[0].name + ". Upload functionality to be implemented.");
                               setProfileDropdown(false);
                             }
                           }} />

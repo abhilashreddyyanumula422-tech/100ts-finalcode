@@ -1,9 +1,9 @@
-import React from "react";
+﻿import React from "react";
 import { Link } from "react-router-dom";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { ActionButton } from "./ui";
 
-export function PageLoading({ label = "Loading…" }) {
+export function PageLoading({ label = "Loading..." }) {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-slate-400">
       <Loader2 size={26} className="animate-spin mb-3" />

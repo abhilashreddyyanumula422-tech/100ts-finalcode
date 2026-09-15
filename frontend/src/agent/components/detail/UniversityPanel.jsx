@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Building2, MapPin, GraduationCap, Navigation } from "lucide-react";
 import { Section, Field, ActionButton } from "../ui";
 import { mapsUrl } from "../../utils/format";
@@ -16,7 +16,7 @@ export default function UniversityPanel({ assignment: a }) {
 
       {a.route_from && (
         <p className="text-[12px] text-slate-400 mt-3">
-          Route · {a.route_from} → {destination || a.university}
+          Route Â· {a.route_from} â†’ {destination || a.university}
         </p>
       )}
 

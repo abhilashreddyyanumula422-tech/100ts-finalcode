@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { User, Phone, Mail, FileText, Calendar, Info, Paperclip, MessageCircle } from "lucide-react";
 import { Section, Field, ActionButton } from "../ui";
 import { whatsappUrl, mailtoUrl, telUrl, greetingFor, displayId, longDate } from "../../utils/format";
@@ -15,26 +15,14 @@ export default function StudentPanel({ assignment: a }) {
 
   return (
     <Section title="Student" icon={<User size={15} />} padded>
-      <div className="flex gap-2 flex-wrap mb-5">
-        <ActionButton href={whatsappUrl(a.phone, greetingFor(a.applicant_name, ref))}
-                      variant="success" size="sm" icon={<MessageCircle size={13} />}>
-          WhatsApp
-        </ActionButton>
-        <ActionButton as="a" href={mailtoUrl(a.email, `100Transcripts — Request ${ref}`)}
-                      size="sm" icon={<Mail size={13} />}>
-          Email
-        </ActionButton>
-        <ActionButton as="a" href={telUrl(a.phone)} size="sm" icon={<Phone size={13} />}>
-          Call
-        </ActionButton>
-      </div>
+
 
       <div className="grid sm:grid-cols-2 gap-4">
         <Field label="Full name" value={a.applicant_name} icon={<User size={14} />} />
         <Field label="Phone" value={a.phone} icon={<Phone size={14} />} />
         <Field label="Email" value={a.email} icon={<Mail size={14} />} />
         <Field label="Certificate" icon={<FileText size={14} />}>
-          <span className="capitalize">{a.requirement || "—"}</span>
+          <span className="capitalize">{a.requirement || "-"}</span>
         </Field>
         {a.expected_completion_date && (
           <Field label="Expected completion" icon={<Calendar size={14} />}

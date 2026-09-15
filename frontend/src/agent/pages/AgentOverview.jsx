@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { RefreshCw } from "lucide-react";
 import { useAgentData } from "../context/AgentDataContext";
 import { PageLoading, PageError, PageHeader } from "../components/PageState";
@@ -9,7 +9,7 @@ import { firstName, weekdayLong } from "../utils/format";
 export default function AgentOverview() {
   const { agent, data, loading, refreshing, error, reload } = useAgentData();
 
-  if (loading) return <PageLoading label="Loading your work dashboard…" />;
+  if (loading) return <PageLoading label="Loading your work dashboard..." />;
   if (error && !data) return <PageError message={error} onRetry={() => reload()} />;
 
   return (

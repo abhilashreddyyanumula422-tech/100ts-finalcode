@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Mail, Lock, User, ArrowRight, Phone, Eye, EyeOff, ShieldCheck } from "lucide-react";
@@ -88,7 +88,7 @@ const Register = () => {
     }
 
     if (!form.email.endsWith("@gmail.com")) {
-      alert("Only students can register");
+      console.log("Only students can register");
       return;
     }
 
@@ -103,13 +103,13 @@ const Register = () => {
       });
 
       if (ok) {
-        alert("Registered successfully ✅");
+        console.log("Registered successfully ✅");
         navigate("/login", { state: { email: form.email.trim() } });
       } else {
-        alert(data.error || "Registration Failed");
+        console.log(data.error || "Registration Failed");
       }
     } catch {
-      alert("Server error");
+      console.log("Server error");
     } finally {
       setLoading(false);
     }

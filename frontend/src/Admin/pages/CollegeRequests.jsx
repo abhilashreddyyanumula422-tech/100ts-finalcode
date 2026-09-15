@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 // Added Search to the imports below
 import { School, MapPin, Mail, Edit, Plus, X, Save, Search } from 'lucide-react';
 import {
@@ -76,10 +76,10 @@ const CollegeRequest = () => {
           regType: "Private",
         });
       } else {
-        alert("Failed to add college");
+        console.log("Failed to add college");
       }
     } catch (err) {
-      alert("Server error");
+      console.log("Server error");
     }
   };
 
@@ -142,7 +142,7 @@ const CollegeRequest = () => {
         </button>
       </div>
 
-      {/* 🔍 SEARCH Section (Kept as you requested) */}
+      {/* ðŸ- SEARCH Section (Kept as you requested) */}
       <div className="mb-5 flex justify-between flex-wrap gap-3">
         <input
           type="text"
@@ -399,7 +399,7 @@ const CollegeRequest = () => {
                     <button
                       onClick={async () => {
                         if (!editingCollege.certType || !editingCollege.certPrice)
-                          return alert("Enter both fields");
+                          return console.log("Enter both fields");
 
                         try {
                           const isEditing = editingCollege.editingCertId;
@@ -422,10 +422,10 @@ const CollegeRequest = () => {
                             if (!response.ok) throw new Error("Failed to add certificate");
                           }
 
-                          // 🔄 REFRESH LIST
+                          // ðŸ-„ REFRESH LIST
                           await fetchCertificates(editingCollege.id);
 
-                          // 🧹 RESET INPUT
+                          // ðŸ§¹ RESET INPUT
                           setEditingCollege(prev => ({
                             ...prev,
                             certType: "",
@@ -434,7 +434,7 @@ const CollegeRequest = () => {
                           }));
 
                         } catch (err) {
-                          alert("Operation failed");
+                          console.log("Operation failed");
                         }
                       }}
                       className="w-full bg-blue-600 text-white hover:bg-blue-700 p-3.5 rounded-xl font-bold text-sm transition active:scale-95 shadow-md"
@@ -489,7 +489,7 @@ const CollegeRequest = () => {
                               await fetchCertificates(editingCollege.id); // ✅ force refresh
                             } catch (err) {
                               // Delete error handled
-                              alert("Delete failed");
+                              console.log("Delete failed");
                             }
                           }}
                           className="text-xs font-bold text-red-500 hover:text-red-700 p-2"

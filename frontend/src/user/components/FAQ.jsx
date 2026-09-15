@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Minus, MessageCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7,7 +7,7 @@ const faqs = [
   {
     question: "What services does 100Transcripts LLP provide?",
     answer:
-      "100Transcripts LLP offers certified transcripts, secure E-Transcripts, credential evaluations, and verified degree certificates. They also provide courier delivery, application tracking, and internship opportunities—trusted by thousands across India and partnered with global agencies like WES, IEE, ECE, and TEC.",
+      "100Transcripts LLP offers certified transcripts, secure E-Transcripts, credential evaluations, and verified degree certificates. They also provide courier delivery, application tracking, and internship opportunities - trusted by thousands across India and partnered with global agencies like WES, IEE, ECE, and TEC.",
   },
 
   {
@@ -33,7 +33,7 @@ const faqs = [
   {
     question: "How do I apply for transcript services?",
     answer:
-      "Click Apply → Upload Documents. Our team will guide you.",
+      "Click Apply â†’ Upload Documents. Our team will guide you.",
   },
 ];
 

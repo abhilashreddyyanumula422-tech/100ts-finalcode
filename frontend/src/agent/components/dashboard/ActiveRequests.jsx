@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+﻿import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Layers, ChevronRight, FileSearch } from "lucide-react";
 import { Section, EmptyState, StatusPill } from "../ui";
@@ -58,7 +58,7 @@ export default function ActiveRequests({ requests = [] }) {
                   </td>
                   <td className="px-3 py-3 text-slate-700">{r.applicant_name}</td>
                   <td className="px-3 py-3 text-slate-500 max-w-[220px] truncate" title={r.university}>
-                    {r.university || "—"}
+                    {r.university || "-"}
                   </td>
                   <td className="px-3 py-3"><StatusPill status={r.status} label={r.status_label} /></td>
                   <td className="px-5 py-3 text-right">

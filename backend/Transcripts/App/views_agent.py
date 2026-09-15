@@ -493,6 +493,40 @@ def admin_eligible_agents(request, app_id):
 @admin_required
 def admin_assign_agent(request, app_id):
     """Manually assign an agent to an application."""
+    if request.method == "DELETE":
+        try:
+            data = json.loads(request.body)
+            agent_id = data.get("agent_id")
+            if not agent_id:
+                return JsonResponse({"error": "agent_id is required"}, status=400)
+            
+            app = Application.objects.get(id=app_id)
+            agent = Agent.objects.get(id=agent_id)
+            
+            assignment = AgentAssignment.objects.filter(application=app, agent=agent).first()
+            if assignment:
+                assignment.delete()
+                
+            # Clear chat messages
+            from .models import AgentAdminMessage
+            AgentAdminMessage.objects.filter(application=app, agent=agent).delete()
+            
+            # Clear Redis chat history if needed
+            from .redis_chat import delete_chat_history
+            try:
+                delete_chat_history(agent_id, app_id)
+            except Exception as e:
+                pass # ignore redis error if any
+                
+            return JsonResponse({"message": "Assignment and chat messages deleted successfully"})
+            
+        except Application.DoesNotExist:
+            return JsonResponse({"error": "Application not found"}, status=404)
+        except Agent.DoesNotExist:
+            return JsonResponse({"error": "Agent not found"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
     try:

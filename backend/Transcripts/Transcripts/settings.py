@@ -129,7 +129,7 @@ else:
 # Environment
 # ---------------------------------------------------------
 
-load_dotenv(BASE_DIR.parent / ".env")
+load_dotenv(BASE_DIR.parent / ".env", override=True)
 
 
 # ---------------------------------------------------------

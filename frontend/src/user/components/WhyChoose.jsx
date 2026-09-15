@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Clock, ShieldCheck, Globe } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -29,7 +29,7 @@ const WhyChoose = () => {
     <section className="w-full pt-8 pb-20 bg-gradient-to-b from-slate-50 to-white overflow-hidden relative">
       <div className="max-w-7xl mx-auto px-6 md:px-12 text-center">
 
-        {/* 🔥 PREMIUM HEADING */}
+        {/* ðŸ-¥ PREMIUM HEADING */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}

@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 /** A label/value pair. Used everywhere on the detail page. */
 export default function Field({ label, value, icon, mono = false, children }) {

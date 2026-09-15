@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { getAgentDashboard } from "../../services/api";
 
 /** Loads the agent work dashboard, with an explicit refreshing state. */
@@ -20,7 +20,7 @@ export default function useAgentDashboard(agentId) {
       if (res.ok) { setData(res.data); setError(""); }
       else setError(res.data?.error || "Could not load your dashboard.");
     } catch {
-      setError("Network error — is the backend running?");
+      setError("Network error - is the backend running?");
     } finally {
       setLoading(false);
       setRefreshing(false);

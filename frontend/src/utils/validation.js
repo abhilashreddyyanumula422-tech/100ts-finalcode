@@ -1,4 +1,4 @@
-// Reusable validation utilities for consistent frontend behavior
+﻿// Reusable validation utilities for consistent frontend behavior
 
 export const nameRegex = /^[a-zA-Z\s]+$/;
 export const phoneRegex = /^[0-9]{10}$/;

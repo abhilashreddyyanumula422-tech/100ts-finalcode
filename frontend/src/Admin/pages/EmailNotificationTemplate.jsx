@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Mail, AlertCircle, Send, Copy, Check } from 'lucide-react';
 
 const EmailTemplateManager = () => {

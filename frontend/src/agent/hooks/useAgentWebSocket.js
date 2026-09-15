@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+﻿import { useEffect, useRef } from "react";
 
 const useAgentWebSocket = (agentId, appId, onMessage) => {
     const wsRef = useRef(null);

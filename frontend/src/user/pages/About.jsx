@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Building2, Award, Users, Shield, ArrowRight, CheckCircle, GraduationCap, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";

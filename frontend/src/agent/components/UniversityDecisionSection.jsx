@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { submitUniversityDecision } from "../../services/api";
 import { Loader2, CheckCircle2, XCircle, FileText, Upload, Calendar } from "lucide-react";
 
@@ -66,7 +66,7 @@ export default function UniversityDecisionSection({
     <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h3 className="font-black text-slate-800 flex items-center gap-2">
-          🏛️ {isAmendment ? "Correct University Decision" : "University Decision"}
+          ðŸ›ï¸ {isAmendment ? "Correct University Decision" : "University Decision"}
         </h3>
         {onCancel && (
           <button onClick={onCancel} className="text-xs font-bold text-slate-500 hover:text-slate-800 underline">

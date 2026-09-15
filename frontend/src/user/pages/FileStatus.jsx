@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   FiFileText, FiClock, FiShield, FiTruck, FiCheckCircle,
@@ -204,6 +204,50 @@ const FileStatus = () => {
                 </div>
               )}
 
+              {/* EXTRA PAYMENT REQUIRED BANNER */}
+              {(statusData.extra_amount > 0 && statusData.extra_payment_status !== 'PAID') || (statusData.total_amount > (statusData.paid_amount || 0)) ? (
+                <div className="p-6 rounded-2xl border bg-indigo-50 border-indigo-200 text-indigo-900">
+                  <div className="flex items-start gap-4">
+                    <div className="mt-1">
+                      <FiAlertTriangle className="w-6 h-6 text-indigo-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-lg mb-1">
+                        Additional Payment Required
+                      </h3>
+                      {statusData.extra_amount > 0 && statusData.extra_payment_status !== 'PAID' ? (
+                        <>
+                          <p className="text-sm opacity-90 mb-2">An additional amount of <strong>₹{statusData.extra_amount - (statusData.extra_paid_amount || 0)}</strong> is required.</p>
+                          {statusData.extra_payment_reason && (
+                            <p className="text-sm opacity-90 mb-4 bg-white/50 p-2 rounded-lg italic">Reason: {statusData.extra_payment_reason}</p>
+                          )}
+                          <button
+                            onClick={() => navigate("/apply", { state: { payExtra: true, appData: statusData } })}
+                            className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition"
+                          >
+                            Proceed to Payment
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm opacity-90 mb-2">A remaining balance of <strong>₹{statusData.total_amount - (statusData.paid_amount || 0)}</strong> is pending for your application.</p>
+                          {statusData.total_amount_edit_reason && (
+                            <p className="text-sm opacity-90 mb-4 bg-white/50 p-2 rounded-lg italic">Reason: {statusData.total_amount_edit_reason}</p>
+                          )}
+                          {!statusData.total_amount_edit_reason && <div className="mb-4"></div>}
+                          <button
+                            onClick={() => navigate("/apply", { state: { payBalance: true, appData: statusData } })}
+                            className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition"
+                          >
+                            Proceed to Payment
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
               {/* MAIN STATUS CARD */}
               <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-8">
@@ -216,7 +260,7 @@ const FileStatus = () => {
                       }`}>
                         {isRejected ? "Rejected" : isDelivered ? "Delivered" : "Processing"}
                       </span>
-                      <span className="text-slate-400 text-sm font-medium">#{statusData.application_id || trackingId || "—"}</span>
+                      <span className="text-slate-400 text-sm font-medium">#{statusData.application_id || trackingId || "-"}</span>
                     </div>
                     <h2 className="text-3xl font-extrabold text-slate-900">
                       {STATUS_LABEL_MAP[statusData.status] || statusData.status}
@@ -225,7 +269,7 @@ const FileStatus = () => {
                   
                   <div className="text-left sm:text-right">
                     <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide mb-1">Applicant</p>
-                    <p className="font-bold text-slate-900">{statusData.fullName || "—"}</p>
+                    <p className="font-bold text-slate-900">{statusData.fullName || "-"}</p>
                     {statusData.university && (
                       <p className="text-sm text-slate-500 font-medium mt-1">{statusData.university}</p>
                     )}
@@ -277,12 +321,12 @@ const FileStatus = () => {
                     <div className="space-y-4">
                       <div>
                         <p className="text-xs text-slate-500 font-semibold">Courier</p>
-                        <p className="font-medium text-slate-900">{courierPartner || "—"}</p>
+                        <p className="font-medium text-slate-900">{courierPartner || "-"}</p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-500 font-semibold">Tracking ID</p>
                         <p className="font-mono text-sm bg-slate-50 border border-slate-100 px-2 py-1 rounded inline-block mt-1 text-slate-800">
-                          {trackingId || "—"}
+                          {trackingId || "-"}
                         </p>
                       </div>
                       {trackingUrl && (

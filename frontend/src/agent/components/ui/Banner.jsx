@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
 
 const TONE = {

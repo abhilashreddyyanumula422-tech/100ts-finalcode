@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { agentLogin } from "../../services/api";
 
@@ -84,7 +84,7 @@ export default function DeliveryLogin() {
               disabled={loading}
               className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold text-sm hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-60 shadow-lg mt-2"
             >
-              {loading ? "Signing in..." : "Sign In →"}
+              {loading ? "Signing in..." : "Sign In â†’"}
             </button>
           </form>
         </div>

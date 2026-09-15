@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  UserCheck, Zap, MapPin, Briefcase, BarChart2, RefreshCw, CheckCircle, XCircle, X
+  UserCheck, Zap, MapPin, Briefcase, BarChart2, RefreshCw, CheckCircle, XCircle, X, MessageSquare, Trash2
 } from "lucide-react";
 import {
-  getEligibleAgents, assignAgent, autoAssignAgent, getApplicationAssignment
+  getEligibleAgents, assignAgent, autoAssignAgent, getApplicationAssignment, API_BASE_URL
 } from "../../services/api";
 
 const STATUS_LABELS = {
@@ -17,10 +18,11 @@ const STATUS_LABELS = {
 };
 
 /**
- * AgentAssignmentPanel — shown inside the Student Requests detail panel
+ * AgentAssignmentPanel "- shown inside the Student Requests detail panel
  * Only visible when application is approved AND payment is Paid.
  */
 export default function AgentAssignmentPanel({ application }) {
+  const navigate = useNavigate();
   const [agents, setAgents] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +30,7 @@ export default function AgentAssignmentPanel({ application }) {
   const [autoAssigning, setAutoAssigning] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success"); // or "error"
-  const [selectedManualAgent, setSelectedManualAgent] = useState("");
+  const [selectedManualAgent, setSelectedManualAgent] = useState([]);
   const [showAssignmentOptions, setShowAssignmentOptions] = useState(false);
 
   const appId = application?.raw_id;
@@ -59,7 +61,6 @@ export default function AgentAssignmentPanel({ application }) {
   };
 
   const handleAssign = async (agentId, agentName) => {
-    if (!window.confirm(`Assign "${agentName}" to this application?`)) return;
     setAssigning(true);
     try {
       const res = await assignAgent(appId, agentId);
@@ -129,8 +130,8 @@ export default function AgentAssignmentPanel({ application }) {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-slate-500 font-semibold uppercase">Assigned Agent</p>
-                    <p className="text-lg font-bold text-slate-800 mt-0.5">{assignedAgent?.name || "—"}</p>
-                    <p className="text-sm text-slate-500">{assignedAgent?.location || "—"} • {assignedAgent?.experience} yrs exp</p>
+                    <p className="text-lg font-bold text-slate-800 mt-0.5">{assignedAgent?.name || "-"}</p>
+                    <p className="text-sm text-slate-500">{assignedAgent?.location || "-"} • {assignedAgent?.experience} yrs exp</p>
                   </div>
                   {statusInfo && (
                     <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${statusInfo.color}`}>
@@ -151,10 +152,45 @@ export default function AgentAssignmentPanel({ application }) {
                 )}
                 {assignmentStatus === "REJECTED_BY_AGENT" && (
                   <div className="bg-red-50 border border-red-200 rounded-xl p-3 mt-2">
-                    <p className="text-sm font-bold text-red-700">⚠️ Agent Rejected this Assignment</p>
-                    <p className="text-sm text-red-600 mt-1">Reason: {assignment.agent_rejection_reason || "—"}</p>
+                    <p className="text-sm font-bold text-red-700">âš ï¸ Agent Rejected this Assignment</p>
+                    <p className="text-sm text-red-600 mt-1">Reason: {assignment.agent_rejection_reason || "-"}</p>
                   </div>
                 )}
+
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-slate-200">
+                  <button
+                    onClick={() => navigate(`/admin/agent-support/${appId}`)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
+                  >
+                    <MessageSquare size={14} /> Note
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(`${API_BASE_URL}/api/admin/applications/${appId}/assign-agent/`, {
+                          method: "DELETE",
+                          headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Token ${JSON.parse(localStorage.getItem("user"))?.token}`
+                          },
+                          body: JSON.stringify({ agent_id: assignedAgent.id })
+                        });
+                        if (res.ok) {
+                          setAssignments(assignments.filter(a => a.id !== assignment.id));
+                          showMsg("Assignment and messages removed successfully", "success");
+                        } else {
+                          showMsg("Failed to remove assignment from backend", "error");
+                        }
+                      } catch (err) {
+                        showMsg("Network error", "error");
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition"
+                  >
+                    <Trash2 size={14} /> Delete
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -179,51 +215,68 @@ export default function AgentAssignmentPanel({ application }) {
       {(assignments.length === 0 || showAssignmentOptions) && (
         <>
 
-          {/* Auto Assign */}
-          <button
-            onClick={handleAutoAssign}
-            disabled={autoAssigning}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white py-2.5 rounded-xl font-bold text-sm shadow hover:opacity-90 transition disabled:opacity-60"
-          >
-            <Zap size={16} /> {autoAssigning ? "Auto-assigning..." : "⚡ Auto-Assign Best Agent"}
-          </button>
-
-          <p className="text-xs text-slate-400 text-center">— or select manually —</p>
-
           {/* Manual Select Box */}
           <div className="flex flex-col gap-2 mt-2">
             {agents.length === 0 ? (
-              <select
-                disabled
-                className="w-full border border-slate-200 rounded-xl p-3 outline-none bg-slate-50 text-slate-400 text-sm cursor-not-allowed"
-              >
-                <option>No active agents available</option>
-              </select>
+              <div className="w-full border border-slate-200 rounded-xl p-3 text-slate-400 text-sm bg-slate-50">
+                No active agents available
+              </div>
             ) : (
-              <select
-                className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
-                value={selectedManualAgent}
-                onChange={(e) => setSelectedManualAgent(e.target.value)}
-              >
-                <option value="">-- Select an Agent --</option>
+              <div className="w-full border border-slate-200 rounded-xl p-3 bg-white max-h-48 overflow-y-auto space-y-2">
                 {agents.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({a.location || "N/A"}) - {a.current_workload} active tasks
-                  </option>
+                  <label key={a.id} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                      checked={selectedManualAgent.includes(a.id.toString())}
+                      onChange={(e) => {
+                        const val = a.id.toString();
+                        if (e.target.checked) {
+                          setSelectedManualAgent([...selectedManualAgent, val]);
+                        } else {
+                          setSelectedManualAgent(selectedManualAgent.filter(id => id !== val));
+                        }
+                      }}
+                    />
+                    <span>
+                      <span className="font-semibold">{a.name}</span> ({a.location || "N/A"}) - {a.current_workload} active tasks
+                    </span>
+                  </label>
                 ))}
-              </select>
+              </div>
             )}
             <button
-              onClick={() => {
-                const agent = agents.find(a => a.id.toString() === selectedManualAgent.toString());
-                if (agent) {
-                  handleAssign(agent.id, agent.name);
+               onClick={async () => {
+                const selectedAgents = agents.filter(a => selectedManualAgent.includes(a.id.toString()));
+                const names = selectedAgents.map(a => a.name).join(", ");
+                
+                setAssigning(true);
+                let successCount = 0;
+                try {
+                  for (const agent of selectedAgents) {
+                    const res = await assignAgent(appId, agent.id);
+                    if (res.ok) {
+                      successCount++;
+                    } else {
+                      showMsg(res.data?.error || `Failed to assign ${agent.name}`, "error");
+                    }
+                  }
+                  if (successCount > 0) {
+                    showMsg(`✅ ${successCount} agent(s) assigned successfully`);
+                    fetchData();
+                    setSelectedManualAgent([]); // Clear selections
+                    setShowAssignmentOptions(false); // Close UI
+                  }
+                } catch {
+                  showMsg("Network error", "error");
+                } finally {
+                  setAssigning(false);
                 }
               }}
-              disabled={!selectedManualAgent || assigning || agents.length === 0}
+              disabled={selectedManualAgent.length === 0 || assigning || agents.length === 0}
               className="w-full px-4 py-2.5 rounded-xl bg-slate-800 text-white text-sm font-bold hover:bg-slate-900 transition disabled:opacity-50"
             >
-              Assign Selected Agent
+              Assign Selected Agent{selectedManualAgent.length > 1 ? "s" : ""}
             </button>
           </div>
         </>

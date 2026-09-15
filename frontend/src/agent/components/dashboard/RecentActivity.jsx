@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Activity, History } from "lucide-react";
 import { Section, EmptyState } from "../ui";
 import { timeAgo } from "../../utils/format";
@@ -25,7 +25,7 @@ export default function RecentActivity({ activity = [] }) {
                 {a.description && <p className="text-[12px] text-slate-500 mt-0.5">{a.description}</p>}
                 <p className="text-[11px] text-slate-400 mt-0.5 tabular-nums">
                   {a.application_display_id || `#${a.application_id}`}
-                  <span className="mx-1.5 text-slate-300">·</span>
+                  <span className="mx-1.5 text-slate-300">Â·</span>
                   {timeAgo(a.created_at)}
                 </p>
               </div>

@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { GitBranch, Check } from "lucide-react";
 import { Section } from "../ui";
 import { statusLabel } from "../../constants/workflow";
@@ -58,13 +58,13 @@ export default function WorkflowTracker({ status }) {
 
       {status === "REJECTED_BY_AGENT" && (
         <p className="mt-4 text-[12px] font-medium text-amber-700 bg-amber-50 ring-1 ring-inset ring-amber-200 rounded-lg px-3 py-2">
-          Off the standard path — {statusLabel(status)}
+          Off the standard path - {statusLabel(status)}
         </p>
       )}
       
       {["REJECTED_BY_UNIVERSITY", "ADDITIONAL_DOC_REQUIRED"].includes(status) && (
         <p className="mt-4 text-[12px] font-medium text-amber-700 bg-amber-50 ring-1 ring-inset ring-amber-200 rounded-lg px-3 py-2">
-          Requires attention — {statusLabel(status)}
+          Requires attention - {statusLabel(status)}
         </p>
       )}
     </Section>

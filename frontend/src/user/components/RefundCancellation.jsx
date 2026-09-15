@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 const RefundCancellation = ({ open, onClose }) => {
   if (!open) return null;
@@ -24,7 +24,7 @@ const RefundCancellation = ({ open, onClose }) => {
             onClick={onClose}
             className="text-white hover:text-gray-200 text-xl"
           >
-            ✕
+            ✖
           </button>
         </div>
 
@@ -77,7 +77,7 @@ const RefundCancellation = ({ open, onClose }) => {
 <p>
   Just send an email to <a href="mailto:support@100Transcripts.com" className="text-blue-600 underline">
   support@100Transcripts.com
-</a>, we’ll gladly refund you 100% of your service charge/processing fee within 24-72 hours of your refund request.
+</a>, we'll gladly refund you 100% of your service charge/processing fee within 24-72 hours of your refund request.
 </p>
         </div>
       </div>

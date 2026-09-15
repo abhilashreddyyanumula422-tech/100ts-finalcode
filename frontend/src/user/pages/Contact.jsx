@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { submitContact } from "../../services/api";
 
@@ -40,7 +40,7 @@ export default function Contact() {
       const response = await submitContact(formData);
 
       if (response.ok) {
-        alert("Message sent successfully!");
+        console.log("Message sent successfully!");
 
         setFormData({
           name: "",
@@ -50,12 +50,12 @@ export default function Contact() {
         });
 
       } else {
-        alert(response.data.error || "Something went wrong");
+        console.log(response.data.error || "Something went wrong");
       }
 
     } catch (error) {
       console.error(error);
-      alert("Server error");
+      console.log("Server error");
     }
   };
 

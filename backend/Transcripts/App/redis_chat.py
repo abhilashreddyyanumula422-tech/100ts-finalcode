@@ -114,3 +114,7 @@ def get_total_unread_for_agent(agent_id):
 def _bump_total(key, delta):
     current = cache.get(key, 0)
     cache.set(key, max(0, current + delta), MESSAGE_TTL)
+
+def delete_chat_history(agent_id, application_id=None):
+    key = get_chat_key(agent_id, application_id)
+    redis_client.delete(key)

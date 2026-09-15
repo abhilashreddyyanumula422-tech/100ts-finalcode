@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 export default function Sign() {
 
@@ -42,7 +42,7 @@ export default function Sign() {
             fontWeight: "bold"
           }}
         >
-          Sign in with DigiLocker →
+          Sign in with DigiLocker â†’
         </button>
       </div>
     </div>

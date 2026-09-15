@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { agentLogin } from "../../services/api";
 
@@ -20,7 +20,7 @@ export default function AgentLogin() {
         localStorage.setItem("agentUser", JSON.stringify(res.data.data));
 
         // NOTE: do NOT write to the "user" key here. adminHeaders() in
-        // services/api.js reads the admin's signed token from "user".token —
+        // services/api.js reads the admin's signed token from "user".token -
         // writing an agent session to that same key silently wipes out
         // whatever admin was logged in on this browser (401 AUTH_REQUIRED on
         // every admin-protected endpoint, e.g. /api/admin/agent-support/...).
@@ -92,7 +92,7 @@ export default function AgentLogin() {
               disabled={loading}
               className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold text-sm hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-60 shadow-lg mt-2"
             >
-              {loading ? "Signing in..." : "Sign In →"}
+              {loading ? "Signing in..." : "Sign In â†’"}
             </button>
           </form>
         </div>
