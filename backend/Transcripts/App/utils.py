@@ -313,3 +313,163 @@ def send_notification_helper(email, phone, subject, message, whatsapp_template=N
     # 2. Send WhatsApp
     if phone and whatsapp_template:
         send_interakt_template(phone, whatsapp_template, whatsapp_data)
+
+
+from django.core.mail import EmailMessage
+from django.db import transaction
+import time
+
+def send_invoice_email(invoice):
+    app = invoice.application
+    subject = f"Payment Successful – Invoice {invoice.invoice_number}"
+    
+    from django.utils import timezone
+    local_time = timezone.localtime(invoice.created_at).strftime('%Y-%m-%d %H:%M')
+    
+    message = f"""Dear {app.fullName},
+
+Your payment of ₹{invoice.amount_paid} has been received successfully.
+
+Invoice Number: {invoice.invoice_number}
+Application ID: {app.application_id}
+Service/Certificate: {app.requirement}
+Payment Date and Time: {local_time}
+Transaction ID: {invoice.payment.order_id}
+Payment Status: PAID
+
+Please find your payment invoice attached.
+
+Thank you,
+100 Transcripts
+"""
+
+    if not app.email:
+        return False
+        
+    try:
+        email = EmailMessage(
+            subject=subject,
+            body=message,
+            from_email=settings.EMAIL_HOST_USER,
+            to=[app.email],
+        )
+        if invoice.pdf_file:
+            pdf_name = f"{invoice.invoice_number}.pdf"
+            email.attach(pdf_name, invoice.pdf_file.read(), 'application/pdf')
+            email.send(fail_silently=False)
+            print(f"✅ Invoice email sent successfully to {app.email}")
+            return True
+        else:
+            print("❌ No PDF found to attach.")
+            return False
+    except Exception as e:
+        print(f"❌ Failed to send invoice email to {app.email}: {str(e)}")
+        logger.error(f"Email failure for invoice {invoice.invoice_number}: {str(e)}")
+        return False
+
+
+def send_interakt_document(phone_number, invoice):
+    """
+    Sends a WhatsApp message with the attached invoice PDF using Interakt API.
+    """
+    if not settings.WHATSAPP_ENABLED:
+        logger.info(f"WhatsApp disabled. Skipping invoice for {phone_number}")
+        return False
+
+    valid_phone = format_phone_number(phone_number)
+    if not valid_phone:
+        return False
+
+    api_key = getattr(settings, "INTERAKT_SECRET_KEY", None)
+    if not api_key:
+        return False
+
+    url = "https://api.interakt.ai/v1/public/message/"
+    headers = {
+        "Authorization": f"Basic {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    pdf_url = ""
+    if invoice.pdf_file:
+        import os
+        domain = os.environ.get("PUBLIC_DOMAIN", "http://127.0.0.1:8000").rstrip('/')
+        pdf_path = invoice.pdf_file.url
+        if not pdf_path.startswith('/'):
+            pdf_path = '/' + pdf_path
+        pdf_url = domain + pdf_path
+
+    try:
+        media_payload = {
+            "countryCode": "+91",
+            "phoneNumber": valid_phone,
+            "type": "Document",
+            "message": f"Payment Successful ✅\n\nInvoice No: {invoice.invoice_number}\n\nYour payment invoice is attached to this WhatsApp message.\n\nThank you,\n100 Transcripts",
+            "data": {
+                "mediaUrl": pdf_url,
+                "filename": f"{invoice.invoice_number}.pdf"
+            }
+        }
+        
+        response = requests.post(url, headers=headers, json=media_payload, timeout=5)
+        if response.status_code in [200, 201, 202]:
+            return True
+        logger.error(f"WhatsApp Document API Error: {response.text}")
+        return False
+    except Exception as e:
+        logger.error(f"WhatsApp Document API Exception for {valid_phone}: {str(e)}")
+        return False
+
+
+def process_successful_payment_invoice(payment):
+    from .models import Invoice
+    from .pdf_generator import generate_invoice_pdf
+    
+    if Invoice.objects.filter(payment=payment).exists():
+        logger.info(f"Invoice already exists for payment {payment.order_id}. Skipping.")
+        return Invoice.objects.filter(payment=payment).first()
+        
+    with transaction.atomic():
+        if Invoice.objects.filter(payment=payment).exists():
+             return Invoice.objects.filter(payment=payment).first()
+             
+        year = time.strftime('%Y')
+        last_invoice = Invoice.objects.order_by('-id').first()
+        if last_invoice:
+            last_id = last_invoice.id + 1
+        else:
+            last_id = 1
+        invoice_number = f"INV-{year}-{last_id:06d}"
+        
+        invoice = Invoice.objects.create(
+            invoice_number=invoice_number,
+            payment=payment,
+            application=payment.application,
+            amount_paid=payment.amount
+        )
+    
+    try:
+        generate_invoice_pdf(invoice)
+    except Exception as e:
+        logger.error(f"PDF Generation failed for {invoice.invoice_number}: {str(e)}")
+        
+    try:
+        email_sent = send_invoice_email(invoice)
+        if email_sent:
+            invoice.email_status = "SENT"
+        else:
+            invoice.email_status = "FAILED"
+    except Exception as e:
+        invoice.email_status = "FAILED"
+        
+    try:
+        wa_sent = send_interakt_document(payment.application.phone, invoice)
+        if wa_sent:
+            invoice.whatsapp_status = "SENT"
+        else:
+            invoice.whatsapp_status = "FAILED"
+    except Exception as e:
+        invoice.whatsapp_status = "FAILED"
+        
+    invoice.save()
+    return invoice

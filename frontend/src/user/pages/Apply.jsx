@@ -1474,11 +1474,11 @@ const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, 
                 <span style={{ fontSize: '18px', color: '#64748b', fontWeight: 'normal' }}>#</span>
                 Enter your detailed requirements <span className="req">*</span>
               </label>
-              <textarea 
-                name="detailedRequirements" 
-                value={form.detailedRequirements || ''} 
-                onChange={onChange} 
-                placeholder="Enter your requirements or additional information" 
+              <textarea
+                name="detailedRequirements"
+                value={form.detailedRequirements || ''}
+                onChange={onChange}
+                placeholder="Enter your requirements or additional information"
                 required
                 rows="3"
                 style={{
@@ -1499,11 +1499,11 @@ const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, 
                 <svg stroke="#64748b" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="16" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                 Address to Deliver<span className="req">*</span>
               </label>
-              <textarea 
-                name="deliveryAddress" 
-                value={form.deliveryAddress || ''} 
-                onChange={onChange} 
-                placeholder="Enter your complete address" 
+              <textarea
+                name="deliveryAddress"
+                value={form.deliveryAddress || ''}
+                onChange={onChange}
+                placeholder="Enter your complete address"
                 required
                 rows="3"
                 style={{
@@ -1531,7 +1531,7 @@ const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, 
                       form.requirement === 'Medium Of Instruction (MOI)-UK NARIC ECCTIS' ? 'Enter address to deliver' :
                         'Reference Number'} <span className="req">*</span>
             </label>
-  
+
             {form.requirement === 'Medium Of Instruction (MOI)-UK NARIC ECCTIS' ? (
               <textarea
                 name="deliveryAddress"
@@ -1563,7 +1563,7 @@ const Step0 = ({ form, errors, onChange, degrees, addDeg, rmDeg, chDeg, upProg, 
                   required
                 />
                 <div style={{ textAlign: 'right', marginTop: '8px' }}>
-  
+
                 </div>
               </div>
             )}
@@ -1770,18 +1770,14 @@ const Step1 = ({ form: _form, goStep, handlePayment, serviceFee, totalAmount, pa
         ) : (
           <>
             <div className="flex justify-between mt-2">
-              <span>Total Amount:</span>
-              <strong>₹ {totalAmount}</strong>
+              <span>Remaining Amount:</span>
+              <strong>₹ {remainingAmount}</strong>
             </div>
             {paidAmount > 0 && (
               <>
                 <div className="flex justify-between mt-1 text-green-600">
                   <span>Already Paid:</span>
                   <strong>₹ {paidAmount}</strong>
-                </div>
-                <div className="flex justify-between mt-1 text-amber-600">
-                  <span>Remaining Balance:</span>
-                  <strong>₹ {remainingAmount}</strong>
                 </div>
 
                 <div className="mt-4 mb-2">

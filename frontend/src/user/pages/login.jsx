@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
@@ -15,6 +15,7 @@ const Login = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -58,6 +59,7 @@ const Login = () => {
     }
 
     setLoading(true);
+    setServerError("");
 
     try {
       const { ok, data } = await login(form.email, form.password);
@@ -77,7 +79,7 @@ const Login = () => {
           password: ""
         });
       } else {
-        console.log(data.error || "Login Failed");
+        setServerError(data?.error || data?.detail || "Invalid email or password");
       }
     } catch {
       console.log("Server Error");
@@ -100,6 +102,12 @@ const Login = () => {
             </h2>
             <p className="text-slate-500 mt-2 font-medium">Please enter your details to sign in.</p>
           </div>
+
+          {serverError && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm font-semibold flex items-center">
+              <span className="mr-2">⚠️</span> {serverError}
+            </div>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-5">
             {/* EMAIL */}

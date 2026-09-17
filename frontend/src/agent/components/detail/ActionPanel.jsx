@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { Zap, CheckCircle2, XCircle, ArrowRight, Upload, AlertCircle } from "lucide-react";
 import { Section, ActionButton, Banner } from "../ui";
 import { statusLabel } from "../../constants/workflow";
@@ -205,10 +205,13 @@ export default function ActionPanel({ assignment: a, agentId, assignmentId, onCh
         )}
 
         {/* ASSIGNMENT STAGE */}
-        {a.status === "ASSIGNED_TO_AGENT" && (
+        {a.status === "ASSIGNED_TO_AGENT" && !showReject && (
           <div className="flex gap-3">
             <ActionButton variant="success" full loading={busy} onClick={() => run(() => acceptAssignment(agentId, assignmentId), "Assignment accepted")}>
               Accept Assignment
+            </ActionButton>
+            <ActionButton variant="dangerSubtle" full disabled={busy} onClick={() => setShowReject(true)}>
+              Reject
             </ActionButton>
           </div>
         )}

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Users, Admin, College, Application, Degree, Document, Certificate, Payment, PasswordResetToken, Issue
+from .models import Users, Admin, College, Application, Degree, Document, Certificate, Payment, PasswordResetToken, Issue, Invoice
 
 @admin.register(Users)
 class UsersAdmin(admin.ModelAdmin):
@@ -51,3 +51,9 @@ class IssueAdmin(admin.ModelAdmin):
     list_filter = ['status', 'created_at']
     search_fields = ['application__fullName', 'agent__name', 'user__name', 'message']
 
+
+@admin.register(Invoice)
+class InvoiceAdmin(admin.ModelAdmin):
+    list_display = ['invoice_number', 'payment', 'amount_paid', 'whatsapp_status', 'email_status', 'created_at']
+    list_filter = ['whatsapp_status', 'email_status', 'created_at']
+    search_fields = ['invoice_number', 'payment__order_id', 'application__fullName']

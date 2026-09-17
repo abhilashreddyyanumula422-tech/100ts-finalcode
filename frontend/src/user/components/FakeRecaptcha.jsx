@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -141,17 +141,8 @@ const FakeRecaptcha = ({ onChange }) => {
                 }}>
                   {squares.map((sq) => {
                     const isSelected = selectedSquares.includes(sq);
-                    // Use realistic placeholder images from unsplash matching the theme
-                    let imgUrl = "";
-                    if (sq === 0) imgUrl = "https://images.unsplash.com/photo-1550505193-41bd4045f8f5?w=200&h=200&fit=crop"; // traffic light
-                    else if (sq === 1) imgUrl = "https://images.unsplash.com/photo-1549887552-cb1071d3e5ca?w=200&h=200&fit=crop"; // building
-                    else if (sq === 2) imgUrl = "https://images.unsplash.com/photo-1506161174092-2628469d1f3b?w=200&h=200&fit=crop"; // road
-                    else if (sq === 3) imgUrl = "https://images.unsplash.com/photo-1563299796-121f64ecb64d?w=200&h=200&fit=crop"; // street
-                    else if (sq === 4) imgUrl = "https://images.unsplash.com/photo-1580922855581-2da2dc779273?w=200&h=200&fit=crop"; // traffic light
-                    else if (sq === 5) imgUrl = "https://images.unsplash.com/photo-1449844908441-8829872d2607?w=200&h=200&fit=crop"; // car
-                    else if (sq === 6) imgUrl = "https://images.unsplash.com/photo-1616422285623-13824bbbb2d3?w=200&h=200&fit=crop"; // traffic light
-                    else if (sq === 7) imgUrl = "https://images.unsplash.com/photo-1494515843206-f3117d3f51b7?w=200&h=200&fit=crop"; // pedestrian
-                    else if (sq === 8) imgUrl = "https://images.unsplash.com/photo-1621687947404-e41b3b139088?w=200&h=200&fit=crop"; // sky
+                    // Use reliable placeholder images
+                    let imgUrl = `https://picsum.photos/seed/captcha${sq}/200/200`;
                     
                     return (
                       <div 

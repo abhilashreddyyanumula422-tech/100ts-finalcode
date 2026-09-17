@@ -2361,9 +2361,11 @@ def submit_application(request):
                 'response': captcha_token
             }, timeout=5)
             result = res.json()
+            print(f"RECAPTCHA VERIFY RESULT: {result}")
             if not result.get('success', False):
                 return Response({"error": "CAPTCHA verification failed. Please try again."}, status=400)
-        except Exception:
+        except Exception as e:
+            print(f"RECAPTCHA EXCEPTION: {e}")
             return Response({"error": "CAPTCHA verification failed. Please try again."}, status=400)
 
         name_err = validate_name_backend(data.get("fullName"))
@@ -2823,7 +2825,11 @@ def get_app_status(request, id):
             "issues_history": issues_history,
             "agent_details": agent_details,
             "tracking_id": app.tracking_id,
-            "service_fee": app.service_fee
+            "service_fee": app.service_fee,
+            "total_amount": app.total_amount,
+            "paid_amount": app.paid_amount,
+            "extra_amount": app.extra_amount,
+            "extra_paid_amount": app.extra_paid_amount
         })
     except Application.DoesNotExist:
         return Response({"error": "Application not found"}, status=404)
@@ -3410,7 +3416,7 @@ class CreateCashfreeOrder(APIView):
             phone = phone[-10:]
 
         if len(phone) < 10:
-            phone = "9999999999"
+            phone = "9876543210"
 
         customer_details = CustomerDetails(
             customer_id=f"CUST_{application.id}",
@@ -3461,11 +3467,19 @@ class CreateCashfreeOrder(APIView):
 
         installment_number = Payment.objects.filter(application=application, status="PAID").count() + 1
 
+        from cashfree_pg.models.order_meta import OrderMeta
+        import os
+        domain = os.environ.get("PUBLIC_DOMAIN", "http://localhost:5173").rstrip('/')
+        order_meta = OrderMeta(
+            return_url=f"{domain}/payment-status?order_id={{order_id}}"
+        )
+
         order_request = CreateOrderRequest(
             order_id=order_id,
             order_amount=order_amount,
             order_currency="INR",
-            customer_details=customer_details
+            customer_details=customer_details,
+            order_meta=order_meta
         )
 
         try:
@@ -3565,6 +3579,8 @@ class VerifyPayment(APIView):
                     
                 application.save()
                 send_interakt_template(application.phone, "payment_status", [application.fullName, track_id, "Successful (Extra Payment)"])
+                from .utils import process_successful_payment_invoice
+                process_successful_payment_invoice(payment)
             else:
                 application.paid_amount = float(application.paid_amount) + float(payment.amount)
                 remaining = float(application.total_amount) - float(application.paid_amount)
@@ -3576,6 +3592,8 @@ class VerifyPayment(APIView):
 
                 application.save()
                 send_interakt_template(application.phone, "payment_status", [application.fullName, track_id, "Successful"])
+                from .utils import process_successful_payment_invoice
+                process_successful_payment_invoice(payment)
         elif response.data.order_status == "FAILED" and previous_status != "FAILED":
             send_interakt_template(payment.application.phone, "payment_status", [payment.application.fullName, track_id, "Failed"])
         elif response.data.order_status in ["PENDING", "ACTIVE"] and previous_status not in ["PENDING", "ACTIVE"]:
@@ -3662,6 +3680,8 @@ def cashfree_webhook(request):
                     from .utils import send_interakt_template
                     track_id = application.tracking_id or str(application.id)
                     send_interakt_template(application.phone, "payment_status", [application.fullName, track_id, "Successful (Extra Payment)"])
+                    from .utils import process_successful_payment_invoice
+                    process_successful_payment_invoice(payment)
                 else:
                     application.paid_amount = float(application.paid_amount) + float(payment.amount)
                     remaining = float(application.total_amount) - float(application.paid_amount)
@@ -3676,6 +3696,8 @@ def cashfree_webhook(request):
                     from .utils import send_interakt_template
                     track_id = application.tracking_id or str(application.id)
                     send_interakt_template(application.phone, "payment_status", [application.fullName, track_id, "Successful"])
+                    from .utils import process_successful_payment_invoice
+                    process_successful_payment_invoice(payment)
 
         elif event == "PAYMENT_FAILED_WEBHOOK":
 

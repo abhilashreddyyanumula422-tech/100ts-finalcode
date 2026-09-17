@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Mail, Lock, User, ArrowRight, Phone, Eye, EyeOff, ShieldCheck } from "lucide-react";
@@ -22,6 +22,7 @@ const Register = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState("");
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -93,6 +94,7 @@ const Register = () => {
     }
 
     setLoading(true);
+    setServerError("");
 
     try {
       const { ok, data } = await register({
@@ -106,7 +108,7 @@ const Register = () => {
         console.log("Registered successfully ✅");
         navigate("/login", { state: { email: form.email.trim() } });
       } else {
-        console.log(data.error || "Registration Failed");
+        setServerError(data?.error || data?.detail || "Registration failed. Email might already exist.");
       }
     } catch {
       console.log("Server error");
@@ -129,6 +131,12 @@ const Register = () => {
             </h2>
             <p className="text-slate-500 mt-2 font-medium">Please fill in your details to get started.</p>
           </div>
+
+          {serverError && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm font-semibold flex items-center">
+              <span className="mr-2">⚠️</span> {serverError}
+            </div>
+          )}
 
           <form onSubmit={handleRegister} className="space-y-5">
             <div className="grid md:grid-cols-2 gap-5">

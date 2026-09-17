@@ -1,4 +1,4 @@
-﻿import {
+import {
   Search, Filter, Eye, CheckCircle, Clock, XCircle, Users, X,
   MapPin, Mail, CreditCard, Truck, FileCheck, CheckCircle2, Circle,
   Send, Copy, Check, AlertCircle, MessageCircle, Zap, Edit2
@@ -50,10 +50,11 @@ const StudentRequests = () => {
       console.log("Please enter a valid amount.");
       return;
     }
-    await updateStatus(editingAmountStudent.raw_id, editingAmountStudent.status, "", null, null, Number(newAmount), null, null, newAmountReason.trim());
+    const calculatedNewTotal = Number(editingAmountStudent.total_amount || editingAmountStudent.service_fee || 0) + Number(newAmount);
+    await updateStatus(editingAmountStudent.raw_id, editingAmountStudent.status, "", null, null, calculatedNewTotal, null, null, newAmountReason.trim());
     
     // Also update selectedStudent so the UI reflects it immediately
-    setSelectedStudent(prev => prev ? { ...prev, total_amount: Number(newAmount), total_amount_edit_reason: newAmountReason.trim() } : null);
+    setSelectedStudent(prev => prev ? { ...prev, total_amount: calculatedNewTotal, total_amount_edit_reason: newAmountReason.trim() } : null);
 
     setEditingAmountStudent(null);
     setNewAmount("");
@@ -126,11 +127,11 @@ const StudentRequests = () => {
         console.log("✅ Notification sent and Status updated to Changes Requested");
         setReplyingTo(null);
       } else {
-        console.log("âŒ " + (response.data.error || "Failed to send"));
+        console.log("❌ " + (response.data.error || "Failed to send"));
       }
     } catch {
       // Error handled
-      console.log("âŒ Server error");
+      console.log("❌ Server error");
     }
   };
 
@@ -140,7 +141,7 @@ const StudentRequests = () => {
 
       if (!response.ok) {
         const errMsg = response.data?.error || "Update failed";
-        console.log("âŒ " + errMsg);
+        console.log("❌ " + errMsg);
         return;
       }
 
@@ -621,7 +622,7 @@ Please check your email for detailed information or contact us if you have any q
                 </div>
 
                 {/* Profile Section */}
-                <div className="flex flex-col md:flex-row justify-between items-start gap-6 border-b pb-6">
+                <div className="flex flex-wrap justify-between items-start gap-6 border-b pb-6">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-2xl font-bold">
                       {String(selectedStudent.fullName || "?").charAt(0)}
@@ -673,7 +674,7 @@ Please check your email for detailed information or contact us if you have any q
                             <button
                               onClick={() => {
                                 setEditingAmountStudent(selectedStudent);
-                                setNewAmount(selectedStudent.total_amount);
+                                setNewAmount("");
                               }}
                               className="text-blue-600 hover:text-blue-800 p-1 bg-blue-100 hover:bg-blue-200 rounded-md transition"
                               title="Edit Amount"
@@ -888,7 +889,7 @@ Please check your email for detailed information or contact us if you have any q
                   <p className="text-xs text-slate-500 mt-1">Delivery via: {selectedStudent.delivery}</p>
                 </div>
 
-                {/* â-€â-€â-€ AGENT ASSIGNMENT PANEL (only when approved + paid) â-€â-€â-€ */}
+                {/* --- AGENT ASSIGNMENT PANEL (only when approved + paid) --- */}
                 {selectedStudent.status === "approved" &&
                   selectedStudent.payment === "Paid" && (
                     <AgentAssignmentPanel application={selectedStudent} />
@@ -898,68 +899,6 @@ Please check your email for detailed information or contact us if you have any q
           </div>
         </div>
       )}
-
-      {/* --- REJECTION REASON MODAL --- */}
-      {/* {rejectingStudent && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="p-6 space-y-5">
-              <div className="flex justify-between items-center border-b pb-3">
-                <h2 className="text-xl font-bold text-red-600 flex items-center gap-2">
-                  <XCircle size={22} /> Reject Application
-                </h2>
-                <button
-                  onClick={() => { setRejectingStudent(null); setRejectionReason(""); }}
-                  className="hover:bg-slate-100 p-1 rounded-full transition"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div>
-                <p className="text-sm text-slate-600 mb-1">
-                  Rejecting application for <strong>{rejectingStudent.fullName}</strong> ({rejectingStudent.id})
-                </p>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Rejection Reason <span className="text-red-500">*</span></label>
-                <textarea
-                  rows="4"
-                  className="w-full border rounded-xl p-3 mt-1 outline-none focus:ring-2 focus:ring-red-400 text-sm"
-                  placeholder="Enter the reason for rejecting this application (mandatory)..."
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                />
-                {!rejectionReason.trim() && (
-                  <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                    <AlertCircle size={12} /> Rejection reason is required
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { setRejectingStudent(null); setRejectionReason(""); }}
-                  className="flex-1 py-3 rounded-xl font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleRejectConfirm}
-                  disabled={!rejectionReason.trim()}
-                  className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition ${rejectionReason.trim()
-                      ? "bg-red-600 text-white hover:bg-red-700 shadow-lg"
-                      : "bg-red-200 text-red-400 cursor-not-allowed"
-                    }`}
-                >
-                  <XCircle size={18} /> Confirm Rejection
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )} */}
 
       {/* --- EDIT AMOUNT MODAL --- */}
       {editingAmountStudent && (
@@ -980,12 +919,23 @@ Please check your email for detailed information or contact us if you have any q
 
               <div>
                 <p className="text-sm text-slate-600 mb-1">
-                  Updating amount for <strong>{editingAmountStudent.fullName}</strong> ({editingAmountStudent.id})
+                  Adding extra amount for <strong>{editingAmountStudent.fullName}</strong> ({editingAmountStudent.id})
                 </p>
               </div>
 
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <div className="flex justify-between text-sm text-slate-600 mb-1">
+                  <span>Current Total:</span>
+                  <strong>₹ {editingAmountStudent.total_amount || editingAmountStudent.service_fee || 0}</strong>
+                </div>
+                <div className="flex justify-between text-sm text-blue-600 font-bold mt-2 pt-2 border-t border-slate-200">
+                  <span>New Calculated Total:</span>
+                  <span>₹ {(Number(editingAmountStudent.total_amount || editingAmountStudent.service_fee || 0) + Number(newAmount || 0)).toFixed(2)}</span>
+                </div>
+              </div>
+
               <div>
-                <label className="text-xs font-bold text-slate-500 uppercase ml-1">New Total Amount (₹) <span className="text-red-500">*</span></label>
+                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Extra Amount to Add (₹) <span className="text-red-500">*</span></label>
                 <input
                   type="number"
                   className="w-full border rounded-xl p-3 mt-1 outline-none focus:ring-2 focus:ring-blue-400 text-sm"
